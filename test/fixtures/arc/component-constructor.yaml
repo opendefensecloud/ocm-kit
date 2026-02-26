@@ -1,0 +1,51 @@
+components:
+  - name: opendefense.cloud/arc
+    provider:
+      name: opendefense.cloud
+    resources:
+      # Artifact Conduit (ARC) Helm Chart (official)
+      - name: helm-chart
+        type: helmChart
+        version: v0.2.0
+        relation: external
+        access:
+          type: ociArtifact
+          imageReference: ghcr.io/opendefensecloud/charts/arc:0.1.4
+
+      # API Server Container Image
+      - name: arc-apiserver-image
+        type: ociImage
+        version: v0.2.0
+        relation: external
+        access:
+          type: ociArtifact
+          imageReference: ghcr.io/opendefensecloud/arc-apiserver:v0.2.0
+
+      # Controller Manager Container Image
+      - name: arc-controller-manager-image
+        type: ociImage
+        version: v0.2.0
+        relation: external
+        access:
+          type: ociArtifact
+          imageReference: ghcr.io/opendefensecloud/arc-controller-manager:v0.2.0
+
+      # etcd Container Image
+      - name: etcd-image
+        type: ociImage
+        version: v3.6.6
+        relation: external
+        access:
+          type: ociArtifact
+          imageReference: quay.io/coreos/etcd:v3.6.6
+
+      - name: helm-values-template
+        type: yaml
+        labels:
+        - name: "opendefense.cloud/helm/values-for"
+          value: helm-chart
+        relation: local
+        input:
+          type: file
+          path: values.yaml.tpl
+

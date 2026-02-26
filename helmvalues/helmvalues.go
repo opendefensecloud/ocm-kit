@@ -239,7 +239,7 @@ func readFileContent(fs vfs.FileSystem, path string) (string, error) {
 func matchLabelValue(value any, target string) bool {
 	switch v := value.(type) {
 	case json.RawMessage:
-		return string(v) == target
+		return string(v) == fmt.Sprintf("\"%s\"", target)
 	case string:
 		return v == target
 	}

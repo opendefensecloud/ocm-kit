@@ -25,29 +25,29 @@ func main() {
 	octx := ocm.FromContext(ctx)
 	repo, err := octx.RepositoryForSpec(ocireg.NewRepositorySpec(cvr.BaseURL()))
 	if err != nil {
-		log.Fatal("failed to construct repository", err)
+		log.Fatal("failed to construct repository: ", err)
 	}
 	defer func() { _ = repo.Close() }()
 
 	compVer, err := repo.LookupComponentVersion(cvr.ComponentName, cvr.Version)
 	if err != nil {
-		log.Fatal("failed to lookup component version", err)
+		log.Fatal("failed to lookup component version: ", err)
 	}
 	defer func() { _ = compVer.Close() }()
 
 	template, err := helmvalues.GetHelmValuesTemplate(compVer, chartResName)
 	if err != nil {
-		log.Fatal("failed to get helm values template", err)
+		log.Fatal("failed to get helm values template: ", err)
 	}
 
 	input, err := helmvalues.GetRenderingInput(compVer)
 	if err != nil {
-		log.Fatal("failed to build rendering input", err)
+		log.Fatal("failed to build rendering input: ", err)
 	}
 
 	output, err := helmvalues.Render(template, input)
 	if err != nil {
-		log.Fatal("failed to render helm values template", err)
+		log.Fatal("failed to render helm values template: ", err)
 	}
 
 	fmt.Println(output)
