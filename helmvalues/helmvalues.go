@@ -3,6 +3,7 @@ package helmvalues
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"slices"
@@ -29,11 +30,14 @@ const (
 	HelmValuesTemplateLabelName = "opendefense.cloud/helm/values-for"
 )
 
+var (
+	ErrNotFound = errors.New("not found")
+)
+
 // HelmValuesTemplate represents a Helm values template found in an OCM component
 type HelmValuesTemplate struct {
 	ResourceName    string
 	ResourceVersion string
-	ChartName       string
 	TemplateContent string
 }
 
@@ -51,32 +55,36 @@ type RenderingInput struct {
 // - chartResourceName: The name of the Helm chart resource to find the template for
 //
 // Returns the HelmValuesTemplate if found, or an error if not found.
-func FindHelmValuesTemplate(compVer ocm.ComponentVersionAccess, chartResourceName string) (*HelmValuesTemplate, error) {
-	var valuesResName string
-	var valuesRes ocm.ResourceAccess
-
-	// Get all resources from the component version
-	resources := compVer.GetResources()
-
-	// Find the resource labeled with the Helm chart name
-	for _, res := range resources {
+func FindHelmValuesTemplate(compVer ocm.ComponentVersionAccess, chartResourceName string) (ocm.ResourceAccess, error) {
+	for _, res := range compVer.GetResources() {
 		labels := res.Meta().GetLabels()
 		if slices.ContainsFunc(labels, func(x v1.Label) bool {
 			return x.Name == HelmValuesTemplateLabelName && matchLabelValue(x.Value, chartResourceName)
 		}) {
-			valuesResName = res.Meta().Name
-			valuesRes = res
-			break
+			return res, nil
 		}
 	}
 
-	if valuesResName == "" {
-		return nil, fmt.Errorf("no helm values template found for chart: %s", chartResourceName)
+	return nil, ErrNotFound
+}
+
+func FindFirstHelmValuesTemplate(compVer ocm.ComponentVersionAccess) (ocm.ResourceAccess, error) {
+	for _, res := range compVer.GetResources() {
+		labels := res.Meta().GetLabels()
+		if slices.ContainsFunc(labels, func(x v1.Label) bool {
+			return x.Name == HelmValuesTemplateLabelName
+		}) {
+			return res, nil
+		}
 	}
 
+	return nil, ErrNotFound
+}
+
+func FetchHelmValuesTemplate(res ocm.ResourceAccess) (*HelmValuesTemplate, error) {
 	// Download the resource
 	mfs := memoryfs.New()
-	effPath, err := download.DownloadResource(compVer.GetContext(), valuesRes, valuesResName, download.WithFileSystem(mfs))
+	effPath, err := download.DownloadResource(res.GetOCMContext(), res, res.Meta().Name, download.WithFileSystem(mfs))
 	if err != nil {
 		return nil, fmt.Errorf("failed to download resource: %w", err)
 	}
@@ -88,11 +96,27 @@ func FindHelmValuesTemplate(compVer ocm.ComponentVersionAccess, chartResourceNam
 	}
 
 	return &HelmValuesTemplate{
-		ResourceName:    valuesResName,
-		ResourceVersion: valuesRes.Meta().Version,
-		ChartName:       chartResourceName,
+		ResourceName:    res.Meta().Name,
+		ResourceVersion: res.Meta().Version,
 		TemplateContent: templateContent,
 	}, nil
+}
+
+// FindHelmValuesTemplate searches for a Helm values template in an OCM component version
+// for a specific chart resource. It returns the template if found, or an error if not found.
+//
+// Parameters:
+// - compVer: An OCM ComponentVersionAccess object
+// - chartResourceName: The name of the Helm chart resource to find the template for
+//
+// Returns the HelmValuesTemplate if found, or an error if not found.
+func GetHelmValuesTemplate(compVer ocm.ComponentVersionAccess, chartResourceName string) (*HelmValuesTemplate, error) {
+	res, err := FindHelmValuesTemplate(compVer, chartResourceName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find helm values template: %w", err)
+	}
+
+	return FetchHelmValuesTemplate(res)
 }
 
 // GetRenderingInput prepares the data needed to render a Helm values template.
@@ -160,9 +184,9 @@ func GetRenderingInput(compVer ocm.ComponentVersionAccess) (*RenderingInput, err
 	}, nil
 }
 
-// RenderHelmValuesTemplate renders a Helm values template using the provided rendering input.
+// Render renders a Helm values template using the provided rendering input.
 // It applies Go template functions including sprig functions for template processing.
-func RenderHelmValuesTemplate(tmpl *HelmValuesTemplate, input *RenderingInput) (string, error) {
+func Render(tmpl *HelmValuesTemplate, input *RenderingInput) (string, error) {
 	if tmpl == nil {
 		return "", fmt.Errorf("template is nil")
 	}
@@ -171,7 +195,7 @@ func RenderHelmValuesTemplate(tmpl *HelmValuesTemplate, input *RenderingInput) (
 	}
 
 	// Create template with custom function map
-	t, err := template.New(tmpl.ChartName).Funcs(GetFuncMap()).Parse(tmpl.TemplateContent)
+	t, err := template.New(tmpl.ResourceName).Funcs(getFuncMap()).Parse(tmpl.TemplateContent)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse template: %w", err)
 	}
@@ -191,8 +215,39 @@ func RenderHelmValuesTemplate(tmpl *HelmValuesTemplate, input *RenderingInput) (
 	return out.String(), nil
 }
 
-// GetFuncMap returns the template function map with sprig functions and custom functions
-func GetFuncMap() template.FuncMap {
+// ParseOCIRef parses an OCI image reference and extracts its components
+func ParseOCIRef(imageRef string) (oci.RefSpec, error) {
+	return oci.ParseRef(imageRef)
+}
+
+func readFileContent(fs vfs.FileSystem, path string) (string, error) {
+	f, err := fs.Open(path)
+	if err != nil {
+		return "", fmt.Errorf("failed to open file: %w", err)
+	}
+	defer func() { _ = f.Close() }()
+
+	b, err := io.ReadAll(f)
+	if err != nil {
+		return "", fmt.Errorf("failed to read file: %w", err)
+	}
+
+	return string(b), nil
+}
+
+// matchLabelValue matches a label value (which can be RawMessage or string)
+func matchLabelValue(value any, target string) bool {
+	switch v := value.(type) {
+	case json.RawMessage:
+		return string(v) == target
+	case string:
+		return v == target
+	}
+	return false
+}
+
+// getFuncMap returns the template function map with sprig functions and custom functions
+func getFuncMap() template.FuncMap {
 	f := sprig.TxtFuncMap()
 	// Remove potentially unsafe functions
 	delete(f, "env")
@@ -210,35 +265,4 @@ func GetFuncMap() template.FuncMap {
 	f["parseRef"] = ParseOCIRef
 
 	return f
-}
-
-// ParseOCIRef parses an OCI image reference and extracts its components
-func ParseOCIRef(imageRef string) (oci.RefSpec, error) {
-	return oci.ParseRef(imageRef)
-}
-
-func readFileContent(fs vfs.FileSystem, path string) (string, error) {
-	f, err := fs.Open(path)
-	if err != nil {
-		return "", fmt.Errorf("failed to open file: %w", err)
-	}
-	defer f.Close()
-
-	b, err := io.ReadAll(f)
-	if err != nil {
-		return "", fmt.Errorf("failed to read file: %w", err)
-	}
-
-	return string(b), nil
-}
-
-// matchLabelValue matches a label value (which can be RawMessage or string)
-func matchLabelValue(value interface{}, target string) bool {
-	switch v := value.(type) {
-	case json.RawMessage:
-		return string(v) == target
-	case string:
-		return v == target
-	}
-	return false
 }
