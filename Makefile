@@ -57,7 +57,7 @@ mod: ## Do go mod tidy, download, verify
 
 .PHONY: test
 test: ## Run all tests (except E2E)
-	$(GO) test -v ./...
+	$(GO) test -coverprofile=ocm-kit.coverprofile -v ./...
 
 .PHONY: e2e
 e2e: ## Run e2e tests
