@@ -17,6 +17,7 @@ ARCH := $(shell go env GOARCH)
 GO ?= go
 DOCKER ?= docker
 SHELLCHECK ?= shellcheck
+OSV_SCANNER ?= osv-scanner
 OCM ?= $(LOCALBIN)/ocm
 
 OCM_VERSION ?= 0.35.0
@@ -44,6 +45,11 @@ clean: ## Clean all temporary resources
 .PHONY: fmt
 fmt: ## Format code
 	$(GO) fmt ./...
+
+
+.PHONY: scan
+scan:
+	$(OSV_SCANNER) scan --config ./.osv-scanner.toml -r .
 
 .PHONY: lint
 lint: ## Lint code
