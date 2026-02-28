@@ -16,6 +16,7 @@ ARCH := $(shell go env GOARCH)
 
 GO ?= go
 DOCKER ?= docker
+SHELLCHECK ?= shellcheck
 OCM ?= $(LOCALBIN)/ocm
 
 OCM_VERSION ?= 0.35.0
@@ -37,12 +38,16 @@ help: ## Display this help.
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
 .PHONY: clean
-clean: zot-stop ocm-clean-ctf ## Clean all temporary resources
+clean: ## Clean all temporary resources
 	rm -rf $(LOCALBIN)
 
 .PHONY: fmt
 fmt: ## Format code
 	$(GO) fmt ./...
+
+.PHONY: lint
+lint: ## Lint code
+	$(SHELLCHECK) test/e2e.sh
 
 .PHONY: mod
 mod: ## Do go mod tidy, download, verify
@@ -50,29 +55,23 @@ mod: ## Do go mod tidy, download, verify
 	@$(GO) mod download
 	@$(GO) mod verify
 
-zot-start:
-	$(DOCKER) run -d -p 5000:5000 \
-	  --name zot-registry \
-	  -v $(BUILD_PATH)/test/fixtures/zot-config.json:/etc/zot/config.json:ro \
-	  -v zot-data:/var/lib/registry \
-	  ghcr.io/project-zot/zot:v2.1.10
+.PHONY: test
+test: ## Run all tests (except E2E)
+	$(GO) test -v ./...
 
-zot-stop:
+.PHONY: e2e
+e2e: ## Run e2e tests
+	OCM=$(OCM) ./test/e2e.sh $(if $(VERSION),--version $(VERSION))
+
+.PHONY: e2e-keep-zot
+e2e-keep-zot: # Run e2e tests, but keep zot running
+	OCM=$(OCM) ./test/e2e.sh --keep-zot $(if $(VERSION),--version $(VERSION))
+
+.PHONY: e2e-stop-zot
+e2e-stop-zot: # Stop and remove zot container
 	$(DOCKER) stop zot-registry
 	$(DOCKER) rm -f zot-registry
 	$(DOCKER) volume rm zot-data
-
-ocm-ctf: ocm
-	cd test/fixtures/arc && $(OCM) add componentversion --version 0.1.0 --create --file ./ctf component-constructor.yaml
-
-ocm-clean-ctf:
-	rm -rf test/fixtures/arc/ctf/
-
-ocm-transfer: ocm ocm-ctf
-	$(OCM) transfer ctf --copy-resources ./test/fixtures/arc/ctf http://localhost:5000/my-components
-
-run:
-	$(GO) run cmd/ocm-kit/main.go
 
 $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
