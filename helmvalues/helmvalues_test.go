@@ -2,7 +2,10 @@ package helmvalues
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
+
+	"ocm.software/ocm/api/oci"
 )
 
 // TestRender tests the Render function with various template scenarios
@@ -22,8 +25,8 @@ func TestRender(t *testing.T) {
 				TemplateContent: `image: {{ index .Resources "app" }}`,
 			},
 			input: &RenderingInput{
-				Resources: map[string]any{
-					"app": "myregistry.com/myapp:1.0.0",
+				Resources: map[string]ImageReference{
+					"app": mkImageRef("myregistry.com/myapp:1.0.0"),
 				},
 			},
 			wantMatch: "image: myregistry.com/myapp:1.0.0",
@@ -33,7 +36,7 @@ func TestRender(t *testing.T) {
 			name:     "nil template",
 			template: nil,
 			input: &RenderingInput{
-				Resources: map[string]any{},
+				Resources: map[string]ImageReference{},
 			},
 			wantErr: true,
 		},
@@ -55,7 +58,7 @@ func TestRender(t *testing.T) {
 				TemplateContent: `{{.Resources | invalid_func}}`,
 			},
 			input: &RenderingInput{
-				Resources: map[string]any{},
+				Resources: map[string]ImageReference{},
 			},
 			wantErr: true,
 		},
@@ -67,8 +70,8 @@ func TestRender(t *testing.T) {
 				TemplateContent: `{{- if index .Resources "app" -}}app exists{{- else -}}app missing{{- end -}}`,
 			},
 			input: &RenderingInput{
-				Resources: map[string]any{
-					"app": "present",
+				Resources: map[string]ImageReference{
+					"app": mkImageRef("present"),
 				},
 			},
 			wantMatch: "app exists",
@@ -83,9 +86,9 @@ func TestRender(t *testing.T) {
 {{- end }}`,
 			},
 			input: &RenderingInput{
-				Resources: map[string]any{
-					"app1": "image1",
-					"app2": "image2",
+				Resources: map[string]ImageReference{
+					"app1": mkImageRef("image1"),
+					"app2": mkImageRef("image2"),
 				},
 			},
 			wantMatch: "app1: image1",
@@ -226,4 +229,25 @@ func findSubstring(s, substr string) bool {
 		}
 	}
 	return false
+}
+
+func mkImageRef(ref string) ImageReference {
+	parsed, err := oci.ParseRef(ref)
+	if err != nil {
+		panic(err)
+	}
+	if parsed.Host == "docker.io" {
+		// special case from oci.ParseRef
+		return ImageReference{
+			Host:       "",
+			Repository: strings.Replace(parsed.Repository, "library/", "", 1),
+			Tag:        derefOrEmpty(parsed.Tag),
+		}
+	}
+
+	return ImageReference{
+		Host:       parsed.Host,
+		Repository: parsed.Repository,
+		Tag:        derefOrEmpty(parsed.Tag),
+	}
 }

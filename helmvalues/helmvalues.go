@@ -10,8 +10,6 @@ import (
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
-	"github.com/mandelsoft/vfs/pkg/memoryfs"
-	"github.com/mandelsoft/vfs/pkg/vfs"
 	"ocm.software/ocm/api/oci"
 	"ocm.software/ocm/api/ocm"
 	"ocm.software/ocm/api/ocm/compdesc"
@@ -22,7 +20,6 @@ import (
 	"ocm.software/ocm/api/ocm/extensions/accessmethods/ociblob"
 	"ocm.software/ocm/api/ocm/extensions/accessmethods/s3"
 	"ocm.software/ocm/api/ocm/extensions/accessmethods/wget"
-	"ocm.software/ocm/api/ocm/extensions/download"
 )
 
 const (
@@ -43,10 +40,17 @@ type HelmValuesTemplate struct {
 	TemplateContent string
 }
 
+type ImageReference struct {
+	Host       string
+	Repository string
+	Tag        string
+	Spec       any
+}
+
 // RenderingInput contains all the data needed to render a Helm values template.
 // It provides access to component resources and the component descriptor for template processing.
 type RenderingInput struct {
-	Resources map[string]any
+	Resources map[string]ImageReference
 	Component *compdesc.ComponentSpec
 }
 
@@ -92,26 +96,28 @@ func FindFirstHelmValuesTemplate(compVer ocm.ComponentVersionAccess) (ocm.Resour
 	return nil, ErrNotFound
 }
 
-// FetchHelmValuesTemplate downloads and extracts the content from a Helm values template resource.
-// It downloads the resource content to a memory filesystem and reads the template file.
+// FetchHelmValuesTemplate extracts the content from a Helm values template resource.
 //
 // Parameters:
 //   - res: The OCM ResourceAccess to download
 //
 // Returns a HelmValuesTemplate with the downloaded content, or an error if download/read fails.
 func FetchHelmValuesTemplate(res ocm.ResourceAccess) (*HelmValuesTemplate, error) {
-	// Download the resource
-	mfs := memoryfs.New()
-	effPath, err := download.DownloadResource(res.GetOCMContext(), res, res.Meta().Name, download.WithFileSystem(mfs))
+	blobaccess, err := res.BlobAccess()
 	if err != nil {
-		return nil, fmt.Errorf("failed to download resource: %w", err)
+		return nil, fmt.Errorf("failed to get blob access for resource: %w", err)
 	}
-
-	// Read the template content
-	templateContent, err := readFileContent(mfs, effPath)
+	defer blobaccess.Close()
+	r, err := blobaccess.Reader()
 	if err != nil {
-		return nil, fmt.Errorf("failed to read template content: %w", err)
+		return nil, fmt.Errorf("failed to get reader for resource access: %w", err)
 	}
+	defer r.Close()
+	b, err := io.ReadAll(r)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read resource content: %w", err)
+	}
+	templateContent := string(b)
 
 	return &HelmValuesTemplate{
 		ResourceName:    res.Meta().Name,
@@ -170,7 +176,7 @@ func GetRenderingInput(compVer ocm.ComponentVersionAccess) (*RenderingInput, err
 	componentSpec := &descriptor.ComponentSpec
 
 	// Extract resource information
-	resourceMap := make(map[string]any)
+	resourceMap := make(map[string]ImageReference)
 
 	for _, res := range compVer.GetResources() {
 		// Use a switch to handle different access method types
@@ -179,34 +185,38 @@ func GetRenderingInput(compVer ocm.ComponentVersionAccess) (*RenderingInput, err
 			// Handle OCI artifact access
 			parsedRef, err := ParseOCIRef(spec.ImageReference)
 			if err != nil {
-				resourceMap[res.Meta().Name] = spec
+				resourceMap[res.Meta().Name] = ImageReference{Spec: spec}
 				continue
 			}
-			resourceMap[res.Meta().Name] = parsedRef
+			resourceMap[res.Meta().Name] = ImageReference{
+				Host:       parsedRef.Host,
+				Repository: parsedRef.Repository,
+				Tag:        derefOrEmpty(parsedRef.Tag),
+				Spec:       spec}
 
 		case *ociblob.AccessSpec:
 			// Handle OCI blob access
-			resourceMap[res.Meta().Name] = spec
+			resourceMap[res.Meta().Name] = ImageReference{Spec: spec}
 
 		case *helm.AccessSpec:
 			// Handle Helm repository access
-			resourceMap[res.Meta().Name] = spec
+			resourceMap[res.Meta().Name] = ImageReference{Spec: spec}
 
 		case *wget.AccessSpec:
 			// Handle Wget access
-			resourceMap[res.Meta().Name] = spec
+			resourceMap[res.Meta().Name] = ImageReference{Spec: spec}
 
 		case *s3.AccessSpec:
 			// Handle S3 access
-			resourceMap[res.Meta().Name] = spec
+			resourceMap[res.Meta().Name] = ImageReference{Spec: spec}
 
 		case *git.AccessSpec:
 			// Handle Git access
-			resourceMap[res.Meta().Name] = spec
+			resourceMap[res.Meta().Name] = ImageReference{Spec: spec}
 
 		default:
 			// Just assign res.Access
-			resourceMap[res.Meta().Name] = res.GlobalAccess()
+			resourceMap[res.Meta().Name] = ImageReference{Spec: res.GlobalAccess()}
 			continue
 		}
 	}
@@ -260,27 +270,6 @@ func ParseOCIRef(imageRef string) (oci.RefSpec, error) {
 	return oci.ParseRef(imageRef)
 }
 
-// readFileContent reads the entire contents of a file from the given filesystem.
-// Parameters:
-//   - fs: The vfs.FileSystem to read from
-//   - path: The file path to read
-//
-// Returns the file contents as a string, or an error if read fails.
-func readFileContent(fs vfs.FileSystem, path string) (string, error) {
-	f, err := fs.Open(path)
-	if err != nil {
-		return "", fmt.Errorf("failed to open file: %w", err)
-	}
-	defer func() { _ = f.Close() }()
-
-	b, err := io.ReadAll(f)
-	if err != nil {
-		return "", fmt.Errorf("failed to read file: %w", err)
-	}
-
-	return string(b), nil
-}
-
 // matchLabelValue checks if a label value matches the target string.
 // Label values can be either json.RawMessage or string, so this function handles both types.
 //
@@ -322,4 +311,26 @@ func getFuncMap() template.FuncMap {
 	f["parseRef"] = ParseOCIRef
 
 	return f
+}
+
+func (r ImageReference) String() string {
+	s := ""
+	if r.Host != "" {
+		s += r.Host + "/"
+	}
+	if r.Repository != "" {
+		s += r.Repository
+	}
+	if r.Tag != "" {
+		s += ":" + r.Tag
+	}
+	return s
+}
+
+func derefOrEmpty(s *string) string {
+	if s == nil {
+		return ""
+	} else {
+		return *s
+	}
 }
