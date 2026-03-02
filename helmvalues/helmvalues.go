@@ -194,7 +194,11 @@ func GetRenderingInput(compVer ocm.ComponentVersionAccess) (*RenderingInput, err
 	ociResourceMap := make(map[string]ImageReference)
 
 	for _, res := range compVer.GetResources() {
-		spec, ok := res.GlobalAccess().(*ociartifact.AccessSpec)
+		ga := res.GlobalAccess()
+		if ga == nil {
+			continue
+		}
+		spec, ok := ga.(*ociartifact.AccessSpec)
 		if !ok {
 			continue
 		}
