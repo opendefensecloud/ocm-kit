@@ -30,14 +30,14 @@ func SplitRef(ref string) (*ComponentVersionRef, error) {
 	// Split host and the rest
 	hostAndPath := strings.SplitN(rest, "/", 2)
 	if len(hostAndPath) != 2 {
-		return nil, fmt.Errorf("invalid format: missing path")
+		return nil, invalidFormatErr(ref)
 	}
 	host := hostAndPath[0]
 
 	// Split path by double slash
 	pathParts := strings.Split(hostAndPath[1], "//")
 	if len(pathParts) != 2 {
-		return nil, fmt.Errorf("invalid format: missing namespace separator")
+		return nil, invalidFormatErr(ref)
 	}
 	namespace := pathParts[0]
 
@@ -45,7 +45,7 @@ func SplitRef(ref string) (*ComponentVersionRef, error) {
 	componentAndVersion := pathParts[1]
 	versionParts := strings.Split(componentAndVersion, ":")
 	if len(versionParts) != 2 {
-		return nil, fmt.Errorf("invalid format: missing version")
+		return nil, invalidFormatErr(ref)
 	}
 	componentName := versionParts[0]
 	version := versionParts[1]
@@ -57,4 +57,8 @@ func SplitRef(ref string) (*ComponentVersionRef, error) {
 		ComponentName: componentName,
 		Version:       version,
 	}, nil
+}
+
+func invalidFormatErr(ref string) error {
+	return fmt.Errorf("invalid component version reference: %s: expected [<protocol>://]<host>/<namespace>//<component-name>:<version>", ref)
 }
