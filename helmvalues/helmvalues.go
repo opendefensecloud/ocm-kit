@@ -107,12 +107,16 @@ func FetchHelmValuesTemplate(res ocm.ResourceAccess) (*HelmValuesTemplate, error
 	if err != nil {
 		return nil, fmt.Errorf("failed to get blob access for resource: %w", err)
 	}
-	defer blobaccess.Close()
+	defer func() {
+		_ = blobaccess.Close()
+	}()
 	r, err := blobaccess.Reader()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get reader for resource access: %w", err)
 	}
-	defer r.Close()
+	defer func() {
+		_ = r.Close()
+	}()
 	b, err := io.ReadAll(r)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read resource content: %w", err)
