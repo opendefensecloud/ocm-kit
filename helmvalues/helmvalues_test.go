@@ -22,10 +22,10 @@ func TestRender(t *testing.T) {
 			template: &HelmValuesTemplate{
 				ResourceName:    "test-template",
 				ResourceVersion: "1.0.0",
-				TemplateContent: `image: {{ index .Resources "app" }}`,
+				TemplateContent: `image: {{ index .OCIResources "app" }}`,
 			},
 			input: &RenderingInput{
-				Resources: map[string]ImageReference{
+				OCIResources: map[string]ImageReference{
 					"app": mkImageRef("myregistry.com/myapp:1.0.0"),
 				},
 			},
@@ -36,7 +36,7 @@ func TestRender(t *testing.T) {
 			name:     "nil template",
 			template: nil,
 			input: &RenderingInput{
-				Resources: map[string]ImageReference{},
+				OCIResources: map[string]ImageReference{},
 			},
 			wantErr: true,
 		},
@@ -55,10 +55,10 @@ func TestRender(t *testing.T) {
 			template: &HelmValuesTemplate{
 				ResourceName:    "invalid",
 				ResourceVersion: "1.0.0",
-				TemplateContent: `{{.Resources | invalid_func}}`,
+				TemplateContent: `{{.OCIResources | invalid_func}}`,
 			},
 			input: &RenderingInput{
-				Resources: map[string]ImageReference{},
+				OCIResources: map[string]ImageReference{},
 			},
 			wantErr: true,
 		},
@@ -67,10 +67,10 @@ func TestRender(t *testing.T) {
 			template: &HelmValuesTemplate{
 				ResourceName:    "conditional",
 				ResourceVersion: "1.0.0",
-				TemplateContent: `{{- if index .Resources "app" -}}app exists{{- else -}}app missing{{- end -}}`,
+				TemplateContent: `{{- if index .OCIResources "app" -}}app exists{{- else -}}app missing{{- end -}}`,
 			},
 			input: &RenderingInput{
-				Resources: map[string]ImageReference{
+				OCIResources: map[string]ImageReference{
 					"app": mkImageRef("present"),
 				},
 			},
@@ -82,11 +82,11 @@ func TestRender(t *testing.T) {
 			template: &HelmValuesTemplate{
 				ResourceName:    "range-template",
 				ResourceVersion: "1.0.0",
-				TemplateContent: `{{- range $k, $v := .Resources }}{{ $k }}: {{ $v }}
+				TemplateContent: `{{- range $k, $v := .OCIResources }}{{ $k }}: {{ $v }}
 {{- end }}`,
 			},
 			input: &RenderingInput{
-				Resources: map[string]ImageReference{
+				OCIResources: map[string]ImageReference{
 					"app1": mkImageRef("image1"),
 					"app2": mkImageRef("image2"),
 				},

@@ -14,12 +14,7 @@ import (
 	"ocm.software/ocm/api/ocm"
 	"ocm.software/ocm/api/ocm/compdesc"
 	v1 "ocm.software/ocm/api/ocm/compdesc/meta/v1"
-	"ocm.software/ocm/api/ocm/extensions/accessmethods/git"
-	"ocm.software/ocm/api/ocm/extensions/accessmethods/helm"
 	"ocm.software/ocm/api/ocm/extensions/accessmethods/ociartifact"
-	"ocm.software/ocm/api/ocm/extensions/accessmethods/ociblob"
-	"ocm.software/ocm/api/ocm/extensions/accessmethods/s3"
-	"ocm.software/ocm/api/ocm/extensions/accessmethods/wget"
 )
 
 const (
@@ -44,14 +39,14 @@ type ImageReference struct {
 	Host       string
 	Repository string
 	Tag        string
-	Spec       any
+	Digest     string
 }
 
 // RenderingInput contains all the data needed to render a Helm values template.
 // It provides access to component resources and the component descriptor for template processing.
 type RenderingInput struct {
-	Resources map[string]ImageReference
-	Component *compdesc.ComponentSpec
+	OCIResources map[string]ImageReference
+	Component    *compdesc.ComponentSpec
 }
 
 // FindHelmValuesTemplate searches for a Helm values template in an OCM component version
@@ -179,55 +174,35 @@ func GetRenderingInput(compVer ocm.ComponentVersionAccess) (*RenderingInput, err
 	}
 	componentSpec := &descriptor.ComponentSpec
 
-	// Extract resource information
-	resourceMap := make(map[string]ImageReference)
+	// Extract oci resource information
+	ociResourceMap := make(map[string]ImageReference)
 
 	for _, res := range compVer.GetResources() {
-		// Use a switch to handle different access method types
-		switch spec := res.GlobalAccess().(type) {
-		case *ociartifact.AccessSpec:
-			// Handle OCI artifact access
-			parsedRef, err := ParseOCIRef(spec.ImageReference)
-			if err != nil {
-				resourceMap[res.Meta().Name] = ImageReference{Spec: spec}
-				continue
-			}
-			resourceMap[res.Meta().Name] = ImageReference{
-				Host:       parsedRef.Host,
-				Repository: parsedRef.Repository,
-				Tag:        derefOrEmpty(parsedRef.Tag),
-				Spec:       spec}
-
-		case *ociblob.AccessSpec:
-			// Handle OCI blob access
-			resourceMap[res.Meta().Name] = ImageReference{Spec: spec}
-
-		case *helm.AccessSpec:
-			// Handle Helm repository access
-			resourceMap[res.Meta().Name] = ImageReference{Spec: spec}
-
-		case *wget.AccessSpec:
-			// Handle Wget access
-			resourceMap[res.Meta().Name] = ImageReference{Spec: spec}
-
-		case *s3.AccessSpec:
-			// Handle S3 access
-			resourceMap[res.Meta().Name] = ImageReference{Spec: spec}
-
-		case *git.AccessSpec:
-			// Handle Git access
-			resourceMap[res.Meta().Name] = ImageReference{Spec: spec}
-
-		default:
-			// Just assign res.Access
-			resourceMap[res.Meta().Name] = ImageReference{Spec: res.GlobalAccess()}
+		spec, ok := res.GlobalAccess().(*ociartifact.AccessSpec)
+		if !ok {
 			continue
+		}
+
+		// Parse OCI reference and store it
+		parsedRef, err := ParseOCIRef(spec.ImageReference)
+		if err != nil {
+			return nil, fmt.Errorf("resources access contained invalid image reference: %w", err)
+		}
+		digest := ""
+		if parsedRef.Digest != nil {
+			digest = string(*parsedRef.Digest)
+		}
+		ociResourceMap[res.Meta().Name] = ImageReference{
+			Host:       parsedRef.Host,
+			Repository: parsedRef.Repository,
+			Tag:        derefOrEmpty(parsedRef.Tag),
+			Digest:     digest,
 		}
 	}
 
 	return &RenderingInput{
-		Resources: resourceMap,
-		Component: componentSpec,
+		OCIResources: ociResourceMap,
+		Component:    componentSpec,
 	}, nil
 }
 
