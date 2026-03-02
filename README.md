@@ -89,19 +89,19 @@ ocm-kit "http://localhost:5000/my-components//opendefense.cloud/arc:0.1.0" \
 ```yaml
 apiserver:
   image:
-    {{- $apiserver := index .Resources "arc-apiserver-image" }}
+    {{- $apiserver := index .OCIResources "arc-apiserver-image" }}
     repository: {{ $apiserver.Host }}/{{ $apiserver.Repository }}
     tag: {{ $apiserver.Tag }}
 
 controller:
   image:
-    {{- $controller := index .Resources "arc-controller-manager-image" }}
+    {{- $controller := index .OCIResources "arc-controller-manager-image" }}
     repository: {{ $controller.Host }}/{{ $controller.Repository }}
     tag: {{ $controller.Tag }}
 
 etcd:
   image:
-    {{- $etcdImage := index .Resources "etcd-image" }}
+    {{- $etcdImage := index .OCIResources "etcd-image" }}
     repository: {{ $etcdImage.Host }}/{{ $etcdImage.Repository }}
     tag: {{ $etcdImage.Tag }}
 ```
@@ -186,19 +186,20 @@ func main() {
 
 When rendering templates, the following data is available via the context:
 
-### `.Resources`
-A map of all resources in the component by resource name. Resources are automatically processed based on their access method:
+### `.OCIResources`
+A map of all oci resources in the component by resource name. Only resources with an OCI-based access method are listed:
 
-For **OCI image artifacts**, each resource is automatically parsed into an object with:
-- `.host` - The registry host
-- `.repository` - The repository path
-- `.tag` - The image tag
+Each resource is automatically parsed into an object with:
+- `.Host` - The registry host
+- `.Repository` - The repository path
+- `.Tag` - The image tag
+- `.Digest` - The image digest
 
 For other access methods (OCI blobs, local blobs, S3, Git, etc.), the relevant fields are extracted into structured maps.
 
 Access example:
 ```yaml
-{{- $image := index .resources "my-image" }}
+{{- $image := index .OCIresources "my-image" }}
 repository: {{ $image.host }}/{{ $image.repository }}
 tag: {{ $image.tag }}
 ```
