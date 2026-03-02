@@ -15,6 +15,7 @@ import (
 	"ocm.software/ocm/api/ocm/compdesc"
 	v1 "ocm.software/ocm/api/ocm/compdesc/meta/v1"
 	"ocm.software/ocm/api/ocm/extensions/accessmethods/ociartifact"
+	"sigs.k8s.io/yaml"
 )
 
 const (
@@ -47,6 +48,21 @@ type ImageReference struct {
 type RenderingInput struct {
 	OCIResources map[string]ImageReference
 	Component    *compdesc.ComponentSpec
+}
+
+// RenderOption is a functional option for configuring Render behavior
+type RenderOption func(*renderConfig)
+
+// renderConfig holds configuration for the Render function
+type renderConfig struct {
+	validateYAML bool
+}
+
+// WithYAMLValidation enables YAML validation of the rendered output
+func WithYAMLValidation() RenderOption {
+	return func(rc *renderConfig) {
+		rc.validateYAML = true
+	}
 }
 
 // FindHelmValuesTemplate searches for a Helm values template in an OCM component version
@@ -213,9 +229,11 @@ func GetRenderingInput(compVer ocm.ComponentVersionAccess) (*RenderingInput, err
 // Parameters:
 //   - tmpl: The HelmValuesTemplate to render
 //   - input: The RenderingInput containing template data
+//   - opts: Optional RenderOption functions to configure behavior (e.g., WithYAMLValidation)
 //
 // Returns the rendered template as a string, or an error if parsing or execution fails.
-func Render(tmpl *HelmValuesTemplate, input *RenderingInput) (string, error) {
+// If WithYAMLValidation is enabled, also returns an error if the output is not valid YAML.
+func Render(tmpl *HelmValuesTemplate, input *RenderingInput, opts ...RenderOption) (string, error) {
 	if tmpl == nil {
 		return "", fmt.Errorf("template is nil")
 	}
@@ -223,8 +241,17 @@ func Render(tmpl *HelmValuesTemplate, input *RenderingInput) (string, error) {
 		return "", fmt.Errorf("rendering input is nil")
 	}
 
+	// Apply options to config
+	cfg := &renderConfig{}
+	for _, opt := range opts {
+		opt(cfg)
+	}
+
 	// Create template with custom function map
-	t, err := template.New(tmpl.ResourceName).Funcs(getFuncMap()).Parse(tmpl.TemplateContent)
+	t, err := template.New(tmpl.ResourceName).
+		Option("missingkey=error").
+		Funcs(getFuncMap()).
+		Parse(tmpl.TemplateContent)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse template: %w", err)
 	}
@@ -235,7 +262,17 @@ func Render(tmpl *HelmValuesTemplate, input *RenderingInput) (string, error) {
 		return "", fmt.Errorf("template execution failed: %w", err)
 	}
 
-	return out.String(), nil
+	result := out.String()
+
+	// Validate YAML if enabled
+	if cfg.validateYAML {
+		var jsonData interface{}
+		if err := yaml.Unmarshal([]byte(result), &jsonData); err != nil {
+			return "", fmt.Errorf("rendered output is not valid YAML: %w", err)
+		}
+	}
+
+	return result, nil
 }
 
 // ParseOCIRef parses an OCI image reference and extracts its components.

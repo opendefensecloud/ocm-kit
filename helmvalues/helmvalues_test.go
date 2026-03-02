@@ -14,6 +14,7 @@ func TestRender(t *testing.T) {
 		name      string
 		template  *HelmValuesTemplate
 		input     *RenderingInput
+		options   []RenderOption
 		wantMatch string
 		wantErr   bool
 	}{
@@ -94,11 +95,32 @@ func TestRender(t *testing.T) {
 			wantMatch: "app1: image1",
 			wantErr:   false,
 		},
+		{
+			name: "template with invalid yaml and validation disabled",
+			template: &HelmValuesTemplate{
+				ResourceName:    "invalid-yaml-template",
+				ResourceVersion: "1.0.0",
+				TemplateContent: `{key1: value1, key2: : value2}`,
+			},
+			input:   &RenderingInput{},
+			wantErr: false,
+		},
+		{
+			name: "template with invalid yaml and validation enabled",
+			template: &HelmValuesTemplate{
+				ResourceName:    "invalid-yaml-template",
+				ResourceVersion: "1.0.0",
+				TemplateContent: `{key1: value1, key2: : value2}`,
+			},
+			input:   &RenderingInput{},
+			options: []RenderOption{WithYAMLValidation()},
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := Render(tt.template, tt.input)
+			got, err := Render(tt.template, tt.input, tt.options...)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Render() error = %v, wantErr %v", err, tt.wantErr)
 				return
