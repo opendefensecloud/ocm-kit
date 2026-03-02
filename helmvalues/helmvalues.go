@@ -36,6 +36,8 @@ type HelmValuesTemplate struct {
 	TemplateContent string
 }
 
+// ImageReference is a representation of an OCI image reference with all its parts.
+// All fields are expected to be non-empty after parsing a reference (see ParseOCIRef) and Host might include a port.
 type ImageReference struct {
 	Host       string
 	Repository string
