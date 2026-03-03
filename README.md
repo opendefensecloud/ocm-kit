@@ -2,7 +2,7 @@
 
 [![Build status](https://github.com/opendefensecloud/ocm-kit/actions/workflows/golang.yaml/badge.svg)](https://github.com/opendefensecloud/ocm-kit/actions/workflows/golang.yaml)
 [![Coverage Status](https://coveralls.io/repos/github/opendefensecloud/ocm-kit/badge.svg?branch=main)](https://coveralls.io/github/opendefensecloud/ocm-kit?branch=main)
-[![Go Report Card](https://goreportcard.com/badge/github.com/opendefensecloud/ocm-kit)](https://goreportcard.com/report/github.com/opendefensecloud/ocm-kit)
+[![Go Report Card](https://goreportcard.com/badge/go.opendefense.cloud/ocm-kit)](https://goreportcard.com/report/go.opendefense.cloud/ocm-kit)
 [![Go Reference](https://pkg.go.dev/badge/go.opendefense.cloud/ocm-kit.svg)](https://pkg.go.dev/go.opendefense.cloud/ocm-kit)
 [![GitHub Release](https://img.shields.io/github/v/release/opendefensecloud/ocm-kit)
 ](https://github.com/opendefensecloud/ocm-kit/releases)
