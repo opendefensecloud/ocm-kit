@@ -49,6 +49,7 @@ deep-docs/
 
 # OCM ctf from e2e test
 ctf
+ctf-rel
 
 # binary in case cmd/ocm-kit was built
 /ocm-kit
