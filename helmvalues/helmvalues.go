@@ -15,6 +15,7 @@ import (
 	"ocm.software/ocm/api/ocm/compdesc"
 	v1 "ocm.software/ocm/api/ocm/compdesc/meta/v1"
 	"ocm.software/ocm/api/ocm/extensions/accessmethods/ociartifact"
+	"ocm.software/ocm/api/ocm/extensions/accessmethods/relativeociref"
 	"sigs.k8s.io/yaml"
 )
 
@@ -196,24 +197,26 @@ func GetRenderingInput(compVer ocm.ComponentVersionAccess) (*RenderingInput, err
 	ociResourceMap := make(map[string]ImageReference)
 
 	for _, res := range compVer.GetResources() {
-		ga := res.GlobalAccess()
-		if ga == nil {
-			continue
+		imageRef, err := resolveOCIReference(res, compVer)
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve OCI reference for resource %s: %w", res.Meta().Name, err)
 		}
-		spec, ok := ga.(*ociartifact.AccessSpec)
-		if !ok {
+
+		if imageRef == "" {
 			continue
 		}
 
 		// Parse OCI reference and store it
-		parsedRef, err := ParseOCIRef(spec.ImageReference)
+		parsedRef, err := ParseOCIRef(imageRef)
 		if err != nil {
 			return nil, fmt.Errorf("resources access contained invalid image reference: %w", err)
 		}
+
 		digest := ""
 		if parsedRef.Digest != nil {
 			digest = string(*parsedRef.Digest)
 		}
+
 		ociResourceMap[res.Meta().Name] = ImageReference{
 			Host:       parsedRef.Host,
 			Repository: parsedRef.Repository,
@@ -226,6 +229,38 @@ func GetRenderingInput(compVer ocm.ComponentVersionAccess) (*RenderingInput, err
 		OCIResources: ociResourceMap,
 		Component:    componentSpec,
 	}, nil
+}
+
+// resolveOCIReference extracts the OCI image reference from a resource access.
+// It handles both absolute references (ociArtifact) via GlobalAccess and relative
+// references (relativeOciReference) by resolving them against the component version's
+// repository.
+func resolveOCIReference(res ocm.ResourceAccess, compVer ocm.ComponentVersionAccess) (string, error) {
+	// Try global access first — works for absolute ociArtifact references.
+	ga := res.GlobalAccess()
+	if ga != nil {
+		if spec, ok := ga.(*ociartifact.AccessSpec); ok {
+			return spec.ImageReference, nil
+		}
+	}
+
+	// Fall back to checking the local access spec for relative OCI references.
+	acc, err := res.Access()
+	if err != nil {
+		return "", fmt.Errorf("failed to get access spec: %w", err)
+	}
+
+	if relSpec, ok := acc.(*relativeociref.AccessSpec); ok {
+		ref, err := relSpec.GetOCIReference(compVer)
+		if err != nil {
+			return "", fmt.Errorf("failed to resolve relative OCI reference: %w", err)
+		}
+
+		return ref, nil
+	}
+
+	// Not an OCI-based resource — skip it.
+	return "", nil
 }
 
 // Render processes a Helm values template with the provided rendering input.

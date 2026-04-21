@@ -102,6 +102,55 @@ else
 	exit 1
 fi
 
+# Transfer with preferRelativeAccess for tests 3 and 4
+REL_VERSION="${VERSION}-rel"
+REL_CTF_DIR="${SCRIPT_DIR}/fixtures/arc/ctf-rel"
+REL_ARTIFACT_INDEX="${REL_CTF_DIR}/artifact-index.json"
+REL_ACCESS_HOST="${REL_ACCESS_HOST:-127.0.0.1:5000}"
+
+if [ ! -f "$REL_ARTIFACT_INDEX" ] || ! grep -q "\"tag\":\"${REL_VERSION}\"" "$REL_ARTIFACT_INDEX"; then
+	echo "Creating and transferring component version ${REL_VERSION} with relative access..."
+	rm -rf "${REL_CTF_DIR}"
+	(cd "$SCRIPT_DIR/fixtures/arc" && ${OCM} add componentversion --version "${REL_VERSION}" --create --file ./ctf-rel component-constructor.yaml)
+	${OCM} --config "$SCRIPT_DIR/fixtures/ocmconfig-relative-access.yaml" transfer ctf --copy-resources "${REL_CTF_DIR}" http://localhost:5000/my-components
+else
+	echo "Component version ${REL_VERSION} already exists in CTF"
+fi
+
+# Test 3: Render default template with relative access
+echo "Test 3: Rendering default Helm values template (relative access)..."
+OUTPUT3=$(${GO} run cmd/ocm-kit/main.go "http://${REL_ACCESS_HOST}/my-components//opendefense.cloud/arc:${REL_VERSION}" -r helm-chart)
+if echo "$OUTPUT3" | grep -q "apiserver:" && \
+   echo "$OUTPUT3" | grep -q "controller:" && \
+   echo "$OUTPUT3" | grep -q "etcd:" && \
+   echo "$OUTPUT3" | grep -Fq "${REL_ACCESS_HOST}/my-components/opendefensecloud/arc-apiserver" && \
+   echo "$OUTPUT3" | grep -Fq "${REL_ACCESS_HOST}/my-components/opendefensecloud/arc-controller-manager" && \
+   echo "$OUTPUT3" | grep -Fq "${REL_ACCESS_HOST}/my-components/coreos/etcd"; then
+	echo "✓ Test 3 passed: Default template rendered correctly with relative access"
+else
+	echo "✗ Test 3 failed: Default template with relative access output missing expected content"
+	echo "Output was:"
+	echo "$OUTPUT3"
+	exit 1
+fi
+
+# Test 4: Render override template with relative access
+echo "Test 4: Rendering override Helm values template (relative access)..."
+OUTPUT4=$(${GO} run cmd/ocm-kit/main.go "http://${REL_ACCESS_HOST}/my-components//opendefense.cloud/arc:${REL_VERSION}" -r helm-chart --local-helm-values-template "$SCRIPT_DIR/fixtures/arc/override-values.yaml.tpl")
+if echo "$OUTPUT4" | grep -q "foobar:" && \
+   echo "$OUTPUT4" | grep -q "fizzbuzz:" && \
+   echo "$OUTPUT4" | grep -q "helloworld:" && \
+   echo "$OUTPUT4" | grep -Fq "${REL_ACCESS_HOST}/my-components/opendefensecloud/arc-apiserver" && \
+   echo "$OUTPUT4" | grep -Fq "${REL_ACCESS_HOST}/my-components/opendefensecloud/arc-controller-manager" && \
+   echo "$OUTPUT4" | grep -Fq "${REL_ACCESS_HOST}/my-components/coreos/etcd"; then
+	echo "✓ Test 4 passed: Override template rendered correctly with relative access"
+else
+	echo "✗ Test 4 failed: Override template with relative access output missing expected content"
+	echo "Output was:"
+	echo "$OUTPUT4"
+	exit 1
+fi
+
 # Cleanup only if --keep-zot was not provided
 if [ "$KEEP_ZOT" = false ]; then
 	echo "Stopping zot registry..."

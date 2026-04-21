@@ -1,0 +1,4 @@
+type: generic.config.ocm.software/v1
+configurations:
+  - type: oci.uploader.config.ocm.software
+    preferRelativeAccess: true
