@@ -42,9 +42,11 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version: ${{ steps.get-go-version.outputs.version }}
-      - name: lint
+      - name: lint-no-golangci
         run: |
-          make lint
+          make lint-no-golangci
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v9
 
   test:
     needs: lint

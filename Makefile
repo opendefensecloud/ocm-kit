@@ -11,7 +11,10 @@ fmt: $(GOLANGCI_LINT) ## Format code
 	$(GOLANGCI_LINT) run --fix
 
 .PHONY: lint
-lint: shellcheck golangci-lint ## Lint code
+lint: lint-no-golangci golangci-lint ## Lint code
+
+.PHONY: lint-no-golangci
+lint-no-golangci: shellcheck ## Run linters but not golangci-lint to exit early in CI/CD pipeline
 
 .PHONY: test
 test: ## Run all tests (except E2E)
