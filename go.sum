@@ -255,6 +255,8 @@ github.com/cloudflare/cfssl v1.6.5 h1:46zpNkm6dlNkMZH/wMW22ejih6gIaJbzL2du6vD7Ze
 github.com/cloudflare/cfssl v1.6.5/go.mod h1:Bk1si7sq8h2+yVEDrFJiz3d7Aw+pfjjJSZVaD+Taky4=
 github.com/cloudflare/circl v1.6.3 h1:9GPOhQGF9MCYUeXyMYlqTR6a5gTrgR/fBLXvUgtVcg8=
 github.com/cloudflare/circl v1.6.3/go.mod h1:2eXP6Qfat4O/Yhh8BznvKnJ+uzEoTQ6jVKJRn81BiS4=
+github.com/cloudfoundry-incubator/candiedyaml v0.0.0-20170901234223-a41693b7b7af h1:6Cpkahw28+gcBdnXQL7LcMTX488+6jl6hfoTMRT6Hm4=
+github.com/cloudfoundry-incubator/candiedyaml v0.0.0-20170901234223-a41693b7b7af/go.mod h1:dOLSIXcRQJiDS1vlrYFNJicoHNZLsBKideE+70hGdV4=
 github.com/cncf/udpa/go v0.0.0-20191209042840-269d4d468f6f/go.mod h1:M8M6+tZqaGXZJjfX53e64911xZQV5JYwmTeXPW+k8Sc=
 github.com/codahale/rfc6979 v0.0.0-20141003034818-6a90f24967eb h1:EDmT6Q9Zs+SbUoc7Ik9EfrFqcylYqgPZ9ANSbTAntnE=
 github.com/codahale/rfc6979 v0.0.0-20141003034818-6a90f24967eb/go.mod h1:ZjrT6AXHbDs86ZSdt/osfBi5qfexBrKUdONk989Wnk4=

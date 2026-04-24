@@ -1,13 +1,13 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
 	"ocm.software/ocm/api/ocm"
 	"ocm.software/ocm/api/ocm/extensions/repositories/ocireg"
+	"ocm.software/ocm/api/ocm/ocmutils"
 
 	"go.opendefense.cloud/ocm-kit/compver"
 	"go.opendefense.cloud/ocm-kit/helmvalues"
@@ -34,8 +34,11 @@ It takes a component version reference and renders the first Helm values templat
 				return fmt.Errorf("failed to split component version reference: %w", err)
 			}
 
-			ctx := context.Background()
-			octx := ocm.FromContext(ctx)
+			octx, err := ocmutils.Configure(ocm.DefaultContext(), "")
+			if err != nil {
+				return fmt.Errorf("failed to configure OCM context: %w", err)
+			}
+
 			repo, err := octx.RepositoryForSpec(ocireg.NewRepositorySpec(cvr.BaseURL()))
 			if err != nil {
 				return fmt.Errorf("failed to construct repository: %w", err)

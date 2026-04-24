@@ -4,8 +4,9 @@ go 1.25.7
 
 require (
 	github.com/Masterminds/sprig/v3 v3.3.0
-	github.com/mandelsoft/vfs v0.4.5-0.20250514111339-d7b067920e91
+	github.com/spf13/cobra v1.10.2
 	ocm.software/ocm v0.35.0
+	sigs.k8s.io/yaml v1.6.0
 )
 
 require (
@@ -205,6 +206,8 @@ require (
 	github.com/mandelsoft/filepath v0.0.0-20240223090642-3e2777258aa3 // indirect
 	github.com/mandelsoft/goutils v0.0.0-20251225170327-b32fc0dd2706 // indirect
 	github.com/mandelsoft/logging v0.0.0-20240618075559-fdca28a87b0a // indirect
+	github.com/mandelsoft/spiff v1.7.0-beta-7 // indirect
+	github.com/mandelsoft/vfs v0.4.5-0.20250514111339-d7b067920e91 // indirect
 	github.com/marstr/guid v1.1.0 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
@@ -268,7 +271,6 @@ require (
 	github.com/skeema/knownhosts v1.3.2 // indirect
 	github.com/spf13/afero v1.15.0 // indirect
 	github.com/spf13/cast v1.10.0 // indirect
-	github.com/spf13/cobra v1.10.2 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/spf13/viper v1.21.0 // indirect
 	github.com/spiffe/go-spiffe/v2 v2.6.0 // indirect
@@ -354,7 +356,6 @@ require (
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/release-utils v0.12.3 // indirect
 	sigs.k8s.io/structured-merge-diff/v6 v6.3.2 // indirect
-	sigs.k8s.io/yaml v1.6.0 // indirect
 )
 
 replace github.com/ThalesIgnite/crypto11 => github.com/ThalesGroup/crypto11 v1.6.0
