@@ -10,7 +10,6 @@ permissions:
   packages: write
 
 env:
-  GO_VERSION: '1.25'
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
@@ -24,11 +23,18 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up Go
-        uses: actions/setup-go@v6
+      - name: get-go-version
+        id: get-go-version
+        run: |
+          GO_VERSION="$(sed -nE 's/^[[:space:]]*goVersion[[:space:]]*=[[:space:]]*"([0-9]+\.[0-9]+\.[0-9]+)";[[:space:]]*$/\1/p' flake.nix)"
+          if [ "$(printf '%s\n' "$GO_VERSION" | sed '/^$/d' | wc -l)" -ne 1 ]; then
+            echo "::error::Expected exactly one goVersion assignment in flake.nix"
+            exit 1
+          fi
+          echo "version=$GO_VERSION" >> $GITHUB_OUTPUT
+      - uses: actions/setup-go@v6
         with:
-          go-version: ${{ env.GO_VERSION }}
-          cache: true
+          go-version: ${{ steps.get-go-version.outputs.version }}
 
       - name: Run tests
         run: go test -race ./...
