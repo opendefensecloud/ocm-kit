@@ -38,19 +38,19 @@ jobs:
           VERSION=${GITHUB_REF#refs/tags/}
           COMMIT=$(git rev-parse --short HEAD)
           BUILD_TIME=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
-          LDFLAGS="-X main.version=${VERSION} -X main.commit=${COMMIT} -X main.buildTime=${BUILD_TIME}"
+          LDFLAGS="-w -X main.version=${VERSION} -X main.commit=${COMMIT} -X main.buildTime=${BUILD_TIME}"
 
           # Linux amd64
-          GOOS=linux GOARCH=amd64 go build -ldflags "${LDFLAGS}" -o bin/ocm-kit-linux-amd64 ./cmd/ocm-kit
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "${LDFLAGS}" -o bin/ocm-kit-linux-amd64 ./cmd/ocm-kit
 
           # Linux arm64
-          GOOS=linux GOARCH=arm64 go build -ldflags "${LDFLAGS}" -o bin/ocm-kit-linux-arm64 ./cmd/ocm-kit
+          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags "${LDFLAGS}" -o bin/ocm-kit-linux-arm64 ./cmd/ocm-kit
 
           # Darwin amd64
-          GOOS=darwin GOARCH=amd64 go build -ldflags "${LDFLAGS}" -o bin/ocm-kit-darwin-amd64 ./cmd/ocm-kit
+          CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags "${LDFLAGS}" -o bin/ocm-kit-darwin-amd64 ./cmd/ocm-kit
 
           # Darwin arm64
-          GOOS=darwin GOARCH=arm64 go build -ldflags "${LDFLAGS}" -o bin/ocm-kit-darwin-arm64 ./cmd/ocm-kit
+          CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags "${LDFLAGS}" -o bin/ocm-kit-darwin-arm64 ./cmd/ocm-kit
 
       - name: Create checksums
         run: |
