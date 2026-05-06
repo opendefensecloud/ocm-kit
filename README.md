@@ -90,6 +90,79 @@ ocm-kit "http://localhost:5000/my-components//opendefense.cloud/arc:0.1.0" \
 - `-f, --local-helm-values-template string` - Path to a local Helm values template file (overrides component template)
 - `-h, --help` - Display help message
 
+### Registry Credentials
+
+`ocm-kit` reuses OCM's standard credential resolution. On startup it calls
+`ocmutils.Configure`, which loads `$HOME/.ocmconfig` if present. Place your
+registry credentials in that file and they are picked up transparently — there
+are no CLI flags or environment variables for credentials.
+
+A minimal config that authenticates against a single OCI registry:
+
+```yaml
+type: generic.config.ocm.software/v1
+configurations:
+  - type: credentials.config.ocm.software
+    consumers:
+      - identity:
+          type: OCIRegistry
+          hostname: ghcr.io
+          pathprefix: opendefensecloud
+        credentials:
+          - type: Credentials/v1
+            properties:
+              username: <user>
+              password: <token>
+```
+
+`identity` selects which requests the credentials apply to. `hostname` is
+matched exactly; `pathprefix` matches by path components (the most specific
+prefix wins). `scheme` (`http`/`https`) and `port` are optional — leaving them
+out matches any scheme/port on the host. This is how you scope different
+tokens to different namespaces on the same registry.
+
+For a local insecure registry:
+
+```yaml
+type: generic.config.ocm.software/v1
+configurations:
+  - type: credentials.config.ocm.software
+    consumers:
+      - identity:
+          type: OCIRegistry
+          scheme: http
+          hostname: 127.0.0.1
+          port: 5000
+        credentials:
+          - type: Credentials/v1
+            properties:
+              username: admin
+              password: admin
+```
+
+To reuse credentials you have already configured for Docker, point OCM at
+`~/.docker/config.json` instead of duplicating them. With
+`propagateConsumerIdentity: true`, every entry in the docker config is
+exposed as an `OCIRegistry` consumer:
+
+```yaml
+type: generic.config.ocm.software/v1
+configurations:
+  - type: credentials.config.ocm.software
+    repositories:
+      - repository:
+          type: DockerConfig/v1
+          dockerConfigFile: "~/.docker/config.json"
+          propagateConsumerIdentity: true
+```
+
+`repositories` and `consumers` can be combined in the same configuration —
+explicit consumers take precedence over what is propagated from the docker
+config, so you can override individual hosts when needed.
+
+See the [OCM credentials tutorial](https://ocm.software/docs/tutorials/credentials-in-an-.ocmconfig-file/)
+for the full set of identity types and credential providers.
+
 ### Example
 
 #### Values Template
