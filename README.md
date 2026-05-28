@@ -160,7 +160,7 @@ configurations:
 explicit consumers take precedence over what is propagated from the docker
 config, so you can override individual hosts when needed.
 
-See the [OCM credentials tutorial](https://ocm.software/docs/tutorials/credentials-in-an-.ocmconfig-file/)
+See the [OCM credentials tutorial](https://ocm.software/legacy/docs/tutorials/credentials-in-an-.ocmconfig-file/)
 for the full set of identity types and credential providers.
 
 ### Example
