@@ -1,6 +1,6 @@
 module go.opendefense.cloud/ocm-kit
 
-go 1.26.2
+go 1.26.3
 
 require (
 	github.com/Masterminds/sprig/v3 v3.3.0
@@ -358,4 +358,4 @@ require (
 	sigs.k8s.io/structured-merge-diff/v6 v6.3.2 // indirect
 )
 
-replace github.com/ThalesIgnite/crypto11 => github.com/ThalesGroup/crypto11 v1.6.0
+replace github.com/ThalesIgnite/crypto11 => github.com/ThalesGroup/crypto11 v1.6.1
