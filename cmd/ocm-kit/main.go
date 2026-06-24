@@ -5,6 +5,9 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
+	"helm.sh/helm/v4/pkg/chart/common"
+	"helm.sh/helm/v4/pkg/chart/v2/loader"
+	"helm.sh/helm/v4/pkg/strvals"
 	"ocm.software/ocm/api/ocm"
 	"ocm.software/ocm/api/ocm/extensions/repositories/ocireg"
 	"ocm.software/ocm/api/ocm/ocmutils"
@@ -17,6 +20,8 @@ func main() {
 	var (
 		chartResName            string
 		localHelmValuesTemplate string
+		setValues               []string
+		extraValuesFiles        []string
 	)
 
 	rootCmd := &cobra.Command{
@@ -81,6 +86,21 @@ It takes a component version reference and renders the first Helm values templat
 				return fmt.Errorf("failed to build rendering input: %w", err)
 			}
 
+			extra := make(map[string]any)
+			for _, f := range extraValuesFiles {
+				fileValues, err := common.ReadValuesFile(f)
+				if err != nil {
+					return fmt.Errorf("failed to parse --extra-values file %q: %w", f, err)
+				}
+				extra = loader.MergeMaps(extra, fileValues.AsMap())
+			}
+			for _, s := range setValues {
+				if err := strvals.ParseInto(s, extra); err != nil {
+					return fmt.Errorf("failed to parse --set value %q: %w", s, err)
+				}
+			}
+			input.Extra = extra
+
 			output, err := helmvalues.Render(template, input)
 			if err != nil {
 				return fmt.Errorf("failed to render helm values template: %w", err)
@@ -93,6 +113,8 @@ It takes a component version reference and renders the first Helm values templat
 
 	rootCmd.Flags().StringVarP(&chartResName, "chart-resource", "r", "", "Name of the Helm chart resource in the component to render a specific helm values template")
 	rootCmd.Flags().StringVarP(&localHelmValuesTemplate, "local-helm-values-template", "f", "", "Path to a local Helm values template file (overrides component template)")
+	rootCmd.Flags().StringArrayVar(&setValues, "set", []string{}, "Set extra template values (key=value pairs; supports auto-typing: true/false, integers, floats)")
+	rootCmd.Flags().StringArrayVar(&extraValuesFiles, "extra-values", []string{}, "Path to a YAML file with extra template values")
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)

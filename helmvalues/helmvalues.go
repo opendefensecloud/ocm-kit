@@ -47,10 +47,12 @@ type ImageReference struct {
 }
 
 // RenderingInput contains all the data needed to render a Helm values template.
-// It provides access to component resources and the component descriptor for template processing.
+// It provides access to component resources, the component descriptor, and any
+// extra user-supplied values for template processing.
 type RenderingInput struct {
 	OCIResources map[string]ImageReference
 	Component    *compdesc.ComponentSpec
+	Extra        map[string]any
 }
 
 // RenderOption is a functional option for configuring Render behavior

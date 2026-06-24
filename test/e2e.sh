@@ -13,6 +13,17 @@ GO="${GO:-go}"
 VERSION="${VERSION:-"0.0.$(date +%s)"}"
 KEEP_ZOT=false
 
+cleanup() {
+	if [ "$KEEP_ZOT" = false ]; then
+		${DOCKER} stop zot-registry 2>/dev/null || true
+		${DOCKER} rm -f zot-registry 2>/dev/null || true
+		${DOCKER} volume rm zot-data 2>/dev/null || true
+	else
+		echo "Keeping zot registry running (--keep-zot flag provided)"
+	fi
+}
+trap cleanup EXIT
+
 # Parse arguments
 while [[ $# -gt 0 ]]; do
 	case $1 in
@@ -151,12 +162,17 @@ else
 	exit 1
 fi
 
-# Cleanup only if --keep-zot was not provided
-if [ "$KEEP_ZOT" = false ]; then
-	echo "Stopping zot registry..."
-	${DOCKER} stop zot-registry
-	${DOCKER} rm -f zot-registry
-	${DOCKER} volume rm zot-data
+# Test 5: Render with --extra-values and --set
+echo "Test 5: Rendering with --extra-values and --set..."
+OUTPUT5=$(${GO} run cmd/ocm-kit/main.go "http://localhost:5000/my-components//opendefense.cloud/arc:${VERSION}" -r helm-chart --local-helm-values-template "$SCRIPT_DIR/fixtures/arc/extra-test.yaml.tpl" \
+  --extra-values "$SCRIPT_DIR/fixtures/arc/extra-values.yaml" \
+  --set from_set=set-value)
+if echo "$OUTPUT5" | grep -q "from_yaml: file-value" && \
+   echo "$OUTPUT5" | grep -q "from_set: set-value"; then
+	echo "✓ Test 5 passed: Extra values rendered correctly"
 else
-	echo "Keeping zot registry running (--keep-zot flag provided)"
+	echo "✗ Test 5 failed: Extra values output missing expected content"
+	echo "Output was:"
+	echo "$OUTPUT5"
+	exit 1
 fi

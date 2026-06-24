@@ -116,6 +116,107 @@ func TestRender(t *testing.T) {
 			options: []RenderOption{WithYAMLValidation()},
 			wantErr: true,
 		},
+		{
+			name: "extra string value",
+			template: &HelmValuesTemplate{
+				ResourceName:    "extra-str",
+				ResourceVersion: "1.0.0",
+				TemplateContent: `val: {{ .Extra.key }}`,
+			},
+			input: &RenderingInput{
+				Extra: map[string]any{"key": "abc"},
+			},
+			wantMatch: "val: abc",
+			wantErr:   false,
+		},
+		{
+			name: "extra bool value",
+			template: &HelmValuesTemplate{
+				ResourceName:    "extra-bool",
+				ResourceVersion: "1.0.0",
+				TemplateContent: `val: {{ .Extra.key }}`,
+			},
+			input: &RenderingInput{
+				Extra: map[string]any{"key": true},
+			},
+			wantMatch: "val: true",
+			wantErr:   false,
+		},
+		{
+			name: "extra int value",
+			template: &HelmValuesTemplate{
+				ResourceName:    "extra-int",
+				ResourceVersion: "1.0.0",
+				TemplateContent: `val: {{ .Extra.key }}`,
+			},
+			input: &RenderingInput{
+				Extra: map[string]any{"key": int64(3)},
+			},
+			wantMatch: "val: 3",
+			wantErr:   false,
+		},
+		{
+			name: "extra nested value",
+			template: &HelmValuesTemplate{
+				ResourceName:    "extra-nested",
+				ResourceVersion: "1.0.0",
+				TemplateContent: `{{ .Extra.tls.enabled }}`,
+			},
+			input: &RenderingInput{
+				Extra: map[string]any{"tls": map[string]any{"enabled": true}},
+			},
+			wantMatch: "true",
+			wantErr:   false,
+		},
+		{
+			name: "extra nil with guarded access errors",
+			template: &HelmValuesTemplate{
+				ResourceName:    "extra-guarded",
+				ResourceVersion: "1.0.0",
+				TemplateContent: `{{ if .Extra.key }}{{ .Extra.key }}{{ end }}`,
+			},
+			input: &RenderingInput{
+				Extra: nil,
+			},
+			wantErr: true,
+		},
+		{
+			name: "extra nil with direct access errors",
+			template: &HelmValuesTemplate{
+				ResourceName:    "extra-direct",
+				ResourceVersion: "1.0.0",
+				TemplateContent: `{{ .Extra.key }}`,
+			},
+			input: &RenderingInput{
+				Extra: nil,
+			},
+			wantErr: true,
+		},
+		{
+			name: "extra missing key errors regardless of guard",
+			template: &HelmValuesTemplate{
+				ResourceName:    "extra-missing",
+				ResourceVersion: "1.0.0",
+				TemplateContent: `{{ if .Extra.missing }}{{ .Extra.missing }}{{ end }}`,
+			},
+			input: &RenderingInput{
+				Extra: map[string]any{"other": "val"},
+			},
+			wantErr: true,
+		},
+		{
+			name: "extra empty string renders nothing",
+			template: &HelmValuesTemplate{
+				ResourceName:    "extra-empty",
+				ResourceVersion: "1.0.0",
+				TemplateContent: `{{ if .Extra.key }}{{ .Extra.key }}{{ end }}`,
+			},
+			input: &RenderingInput{
+				Extra: map[string]any{"key": ""},
+			},
+			wantMatch: "",
+			wantErr:   false,
+		},
 	}
 
 	for _, tt := range tests {
