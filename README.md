@@ -88,6 +88,7 @@ ocm-kit "http://localhost:5000/my-components//opendefense.cloud/arc:0.1.0" \
 
 - `-r, --chart-resource string` - Name of the Helm chart resource in the component (default: "")
 - `-f, --local-helm-values-template string` - Path to a local Helm values template file (overrides component template)
+- `-p, --pull-secrets-file string` - Path to a pull secrets JSON file mapping registries to Kubernetes secret names
 - `-h, --help` - Display help message
 
 ### Registry Credentials
@@ -163,6 +164,69 @@ config, so you can override individual hosts when needed.
 See the [OCM credentials tutorial](https://ocm.software/docs/tutorials/credentials-in-an-.ocmconfig-file/)
 for the full set of identity types and credential providers.
 
+### Pull Secrets
+
+When rendering the Helm values template, you may need to attach
+`imagePullSecrets` to deployments. The `--pull-secrets-file` flag and the
+`pullSecretFor` template function work together to map OCI registries to
+Kubernetes Secret names.
+
+This approach allows the template author to specify where to add
+`imagePullSecrets` in a `values.yaml` while the deployer has control over
+deployment specific data like the concrete secret names.
+
+The pull secrets file uses the following format:
+
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/opendefensecloud/ocm-kit/refs/heads/main/helmvalues/pullsecrets-schema.json",
+  "pullSecrets": [
+    {
+      "registry": "docker.io",
+      "secretName": "docker-hub-cred"
+    },
+    {
+      "registry": "ghcr.io/my-org",
+      "secretName": "ghcr-org-cred"
+    },
+    {
+      "registry": "localhost:5000",
+      "secretName": "regcred"
+    }
+  ]
+}
+```
+
+The `pullSecretFor` function in templates resolves an OCI reference (hostname,
+hostname/repo, or full image ref) to the matching secret name. Resolution walks
+from most-specific to least-specific path segments:
+
+- `pullSecretFor "ghcr.io/my-org/my-repo:latest"` checks `ghcr.io/my-org/my-repo` -> `ghcr.io/my-org` -> `ghcr.io`
+- `pullSecretFor "docker.io"` checks the registry host directly
+
+If no match is found `pullSecretFor` returns the empty string.
+
+It is advised that templates may always be written in a way that gracefully
+handle `pullSecretFor` returning an empty string value. Like in the example
+below, template authors can make use of go-template's `with` expression.
+
+Example template usage:
+
+```yaml
+{{- $image := index .OCIResources "my-image" }}
+{{- with pullSecretFor $image.Host }}
+imagePullSecrets:
+  - name: {{ . }}
+{{- end }}
+```
+
+CLI invocation:
+
+```bash
+ocm-kit "https://example.com/my-components//example.com/my-component:0.1.0" \
+  --pull-secrets-file ./pull-secrets.json
+```
+
 ### Example
 
 #### Values Template
@@ -210,7 +274,7 @@ import (
     "context"
     "fmt"
     "log"
-    
+
     "go.opendefense.cloud/ocm-kit/helmvalues"
     "go.opendefense.cloud/ocm-kit/compver"
     "ocm.software/ocm/api/ocm"
@@ -219,13 +283,13 @@ import (
 
 func main() {
     ctx := context.Background()
-    
+
     // Parse component version reference
     cvr, err := compver.SplitRef("http://localhost:5000/my-components//opendefense.cloud/arc:0.1.0")
     if err != nil {
         log.Fatal(err)
     }
-    
+
     // Setup OCM repository
     octx := ocm.FromContext(ctx)
     repo, err := octx.RepositoryForSpec(ocireg.NewRepositorySpec(cvr.BaseURL()))
@@ -233,32 +297,32 @@ func main() {
         log.Fatal(err)
     }
     defer repo.Close()
-    
+
     // Get component version
     compVer, err := repo.LookupComponentVersion(cvr.ComponentName, cvr.Version)
     if err != nil {
         log.Fatal(err)
     }
     defer compVer.Close()
-    
+
     // Find helm values template for a specific chart
     tmpl, err := helmvalues.GetHelmValuesTemplate(compVer, "helm-chart")
     if err != nil {
         log.Fatal(err)
     }
-    
+
     // Get rendering input with component data
     input, err := helmvalues.GetRenderingInput(compVer)
     if err != nil {
         log.Fatal(err)
     }
-    
+
     // Render the template
     renderedValues, err := helmvalues.Render(tmpl, input)
     if err != nil {
         log.Fatal(err)
     }
-    
+
     fmt.Println(renderedValues)
 }
 ```
@@ -284,6 +348,11 @@ Access example:
 repository: {{ $image.host }}/{{ $image.repository }}
 tag: {{ $image.tag }}
 ```
+
+### `.PullSecrets`
+A map of registries to secret-names. Use the `pullSecretFor` template function
+to refer to possible `imagePullSecrets`. It implements a hierarchical
+path-resolution logic (See [Pull Secrets](#pull-secrets)).
 
 ### `.Component`
 Component metadata available as a `compdesc.ComponentSpec`, providing access to:
