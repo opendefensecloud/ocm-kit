@@ -234,6 +234,195 @@ func TestMatchLabelValue(t *testing.T) {
 	}
 }
 
+// TestPullSecretsResolve tests the Resolve method with OCI refs and raw registries
+func TestPullSecretsResolve(t *testing.T) {
+	tests := []struct {
+		name    string
+		ref     string
+		secrets PullSecrets
+		want    string
+	}{
+		{
+			name:    "full ref matches Host/Repository",
+			ref:     "ghcr.io/org/myapp:v1.0.0",
+			secrets: PullSecrets{"ghcr.io/org/myapp": "repo-cred"},
+			want:    "repo-cred",
+		},
+		{
+			name:    "full ref matches host only",
+			ref:     "ghcr.io/org/myapp:v1.0.0",
+			secrets: PullSecrets{"ghcr.io": "org-cred"},
+			want:    "org-cred",
+		},
+		{
+			name: "Host/Repository takes priority over host",
+			ref:  "ghcr.io/org/myapp:v1.0.0",
+			secrets: PullSecrets{
+				"ghcr.io/org/myapp": "repo-cred",
+				"ghcr.io":           "org-cred",
+			},
+			want: "repo-cred",
+		},
+		{
+			name:    "ref with nested path matches correctly",
+			ref:     "registry.example.com/team/service/sub:v2",
+			secrets: PullSecrets{"registry.example.com/team/service/sub": "nested-cred"},
+			want:    "nested-cred",
+		},
+		{
+			name:    "ref matches intermediate org path, not just host",
+			ref:     "docker.io/team-a/my-repo:latest",
+			secrets: PullSecrets{"docker.io/team-a": "team-a-secret"},
+			want:    "team-a-secret",
+		},
+		{
+			name: "most specific match wins among path hierarchy",
+			ref:  "docker.io/team-a/my-repo:latest",
+			secrets: PullSecrets{
+				"docker.io/team-a/my-repo": "repo-secret",
+				"docker.io/team-a":         "org-secret",
+				"docker.io":                "global-secret",
+			},
+			want: "repo-secret",
+		},
+		{
+			name:    "intermediate org resolves independently per organization",
+			ref:     "docker.io/team-a/svc:latest",
+			secrets: PullSecrets{"docker.io/team-b": "team-b-secret"},
+			want:    "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.secrets.Resolve(tt.ref)
+			if got != tt.want {
+				t.Errorf("PullSecrets.Resolve(%q) = %q, want %q", tt.ref, got, tt.want)
+			}
+		})
+	}
+}
+
+// TestPullSecretsGet tests the PullSecrets type directly
+func TestPullSecretsGet(t *testing.T) {
+	tests := []struct {
+		name     string
+		secrets  PullSecrets
+		registry string
+		want     string
+	}{
+		{
+			name:     "known registry returns secret",
+			secrets:  PullSecrets{"docker.io": "regcred", "ghcr.io": "ghcr-cred"},
+			registry: "docker.io",
+			want:     "regcred",
+		},
+		{
+			name:     "unknown registry returns empty string",
+			secrets:  PullSecrets{"docker.io": "regcred"},
+			registry: "unknown.registry.io",
+			want:     "",
+		},
+		{
+			name:     "nil PullSecrets returns empty string",
+			secrets:  nil,
+			registry: "docker.io",
+			want:     "",
+		},
+		{
+			name:     "empty PullSecrets returns empty string",
+			secrets:  PullSecrets{},
+			registry: "docker.io",
+			want:     "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.secrets.Get(tt.registry)
+			if got != tt.want {
+				t.Errorf("PullSecrets.Get(%q) = %q, want %q", tt.registry, got, tt.want)
+			}
+		})
+	}
+}
+
+// TestRenderPullSecretFor tests the pullSecretFor template function via Render
+func TestRenderPullSecretFor(t *testing.T) {
+	tests := []struct {
+		name     string
+		template *HelmValuesTemplate
+		input    *RenderingInput
+		want     string
+		wantErr  bool
+	}{
+		{
+			name: "pullSecretFor with matching registry",
+			template: &HelmValuesTemplate{
+				ResourceName:    "pull-secret-test",
+				ResourceVersion: "1.0.0",
+				TemplateContent: `secret: {{ pullSecretFor "docker.io" }}`,
+			},
+			input: &RenderingInput{
+				OCIResources: map[string]ImageReference{},
+				PullSecrets: PullSecrets{
+					"docker.io": "regcred",
+				},
+			},
+			want:    "secret: regcred",
+			wantErr: false,
+		},
+		{
+			name: "pullSecretFor with non-matching registry",
+			template: &HelmValuesTemplate{
+				ResourceName:    "pull-secret-no-match",
+				ResourceVersion: "1.0.0",
+				TemplateContent: `secret: {{ pullSecretFor "unknown.io" }}`,
+			},
+			input: &RenderingInput{
+				OCIResources: map[string]ImageReference{},
+				PullSecrets: PullSecrets{
+					"docker.io": "regcred",
+				},
+			},
+			want:    "secret: ",
+			wantErr: false,
+		},
+		{
+			name: "pullSecretFor with ref",
+			template: &HelmValuesTemplate{
+				ResourceName:    "pull-secret-ref",
+				ResourceVersion: "1.0.0",
+				TemplateContent: `secret: {{ pullSecretFor "registry.example.com/repo/image:tag" }}`,
+			},
+			input: &RenderingInput{
+				OCIResources: map[string]ImageReference{},
+				PullSecrets: PullSecrets{
+					"registry.example.com": "example-cred",
+				},
+			},
+			want:    "secret: example-cred",
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := Render(tt.template, tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Render() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if err != nil {
+				return
+			}
+			if got != tt.want {
+				t.Errorf("Render() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
 // Helper function to check if a string contains a substring
 func contains(s, substr string) bool {
 	return len(s) > 0 && len(substr) > 0 && len(s) >= len(substr) &&

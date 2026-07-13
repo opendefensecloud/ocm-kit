@@ -151,6 +151,21 @@ else
 	exit 1
 fi
 
+# Test 5: Render with pull secrets file
+echo "Test 5: Rendering with pull secrets file..."
+OUTPUT5=$(${GO} run cmd/ocm-kit/main.go "http://localhost:5000/my-components//opendefense.cloud/arc:${VERSION}" \
+  --local-helm-values-template "$SCRIPT_DIR/fixtures/arc/pull-secrets-values.yaml.tpl" \
+  --pull-secrets-file "$SCRIPT_DIR/fixtures/arc/pull-secrets.json")
+if [ "$(echo "$OUTPUT5" | grep -c -- "- name: regcred")" -eq 3 ] && \
+   [ "$(echo "$OUTPUT5" | grep -c -- "imagePullSecrets:")" -eq 3 ]; then
+	echo "✓ Test 5 passed: Pull secrets rendered correctly"
+else
+	echo "✗ Test 5 failed: Pull secrets output missing expected content"
+	echo "Output was:"
+	echo "$OUTPUT5"
+	exit 1
+fi
+
 # Cleanup only if --keep-zot was not provided
 if [ "$KEEP_ZOT" = false ]; then
 	echo "Stopping zot registry..."

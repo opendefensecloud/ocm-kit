@@ -17,6 +17,7 @@ func main() {
 	var (
 		chartResName            string
 		localHelmValuesTemplate string
+		pullSecretsFilePath     string
 	)
 
 	rootCmd := &cobra.Command{
@@ -81,6 +82,14 @@ It takes a component version reference and renders the first Helm values templat
 				return fmt.Errorf("failed to build rendering input: %w", err)
 			}
 
+			if pullSecretsFilePath != "" {
+				ps, err := helmvalues.ParsePullSecretsFile(pullSecretsFilePath)
+				if err != nil {
+					return fmt.Errorf("failed to parse pull secrets file: %w", err)
+				}
+				input.PullSecrets = ps
+			}
+
 			output, err := helmvalues.Render(template, input)
 			if err != nil {
 				return fmt.Errorf("failed to render helm values template: %w", err)
@@ -93,6 +102,7 @@ It takes a component version reference and renders the first Helm values templat
 
 	rootCmd.Flags().StringVarP(&chartResName, "chart-resource", "r", "", "Name of the Helm chart resource in the component to render a specific helm values template")
 	rootCmd.Flags().StringVarP(&localHelmValuesTemplate, "local-helm-values-template", "f", "", "Path to a local Helm values template file (overrides component template)")
+	rootCmd.Flags().StringVarP(&pullSecretsFilePath, "pull-secrets-file", "p", "", "Path to a pull secrets JSON file mapping registries to Kubernetes secret names")
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)

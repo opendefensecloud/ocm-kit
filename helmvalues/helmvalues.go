@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"slices"
+	"strings"
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
@@ -24,10 +25,8 @@ const (
 	HelmValuesTemplateLabelName = "opendefense.cloud/helm/values-for"
 )
 
-var (
-	// ErrNotFound is returned when a requested Helm values template is not found
-	ErrNotFound = errors.New("not found")
-)
+// ErrNotFound is returned when a requested Helm values template is not found
+var ErrNotFound = errors.New("not found")
 
 // HelmValuesTemplate represents a Helm values template found in an OCM component.
 // It contains the template content along with metadata about its resource.
@@ -46,11 +45,47 @@ type ImageReference struct {
 	Digest     string
 }
 
+// PullSecrets is a collection of registry-to-secret mappings for pull secrets.
+type PullSecrets map[string]string
+
+// Get safely returns the secret name for a registry, falling back to the empty string.
+func (p PullSecrets) Get(registry string) string {
+	if p == nil {
+		return ""
+	}
+	return p[registry]
+}
+
+// Resolve parses ref as an OCI reference and walks the path from most specific
+// to least specific (Host/path/to/image -> Host/path/to -> … -> Host).
+// If no match is found this way it tries to lookup the raw string.
+func (p PullSecrets) Resolve(ref string) string {
+	if !strings.Contains(ref, "/") {
+		return p.Get(ref)
+	}
+	parsed, err := ParseOCIRef(ref)
+	if err != nil || parsed.Repository == "" {
+		return p.Get(ref)
+	}
+	parts := strings.Split(parsed.Repository, "/")
+	for i := len(parts); i >= 0; i-- {
+		key := parsed.Host
+		if i > 0 {
+			key += "/" + strings.Join(parts[:i], "/")
+		}
+		if secret := p.Get(key); secret != "" {
+			return secret
+		}
+	}
+	return p.Get(ref)
+}
+
 // RenderingInput contains all the data needed to render a Helm values template.
 // It provides access to component resources and the component descriptor for template processing.
 type RenderingInput struct {
 	OCIResources map[string]ImageReference
 	Component    *compdesc.ComponentSpec
+	PullSecrets  PullSecrets
 }
 
 // RenderOption is a functional option for configuring Render behavior
@@ -291,7 +326,7 @@ func Render(tmpl *HelmValuesTemplate, input *RenderingInput, opts ...RenderOptio
 	// Create template with custom function map
 	t, err := template.New(tmpl.ResourceName).
 		Option("missingkey=error").
-		Funcs(getFuncMap()).
+		Funcs(getFuncMap(input.PullSecrets)).
 		Parse(tmpl.TemplateContent)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse template: %w", err)
@@ -350,7 +385,7 @@ func matchLabelValue(value any, target string) bool {
 // plus custom functions for JSON conversion and OCI reference parsing.
 //
 // Returns a template.FuncMap with all available template functions.
-func getFuncMap() template.FuncMap {
+func getFuncMap(pullSecrets PullSecrets) template.FuncMap {
 	f := sprig.TxtFuncMap()
 	// Remove potentially unsafe functions
 	delete(f, "env")
@@ -366,6 +401,10 @@ func getFuncMap() template.FuncMap {
 	}
 
 	f["parseRef"] = ParseOCIRef
+
+	f["pullSecretFor"] = func(ref string) string {
+		return pullSecrets.Resolve(ref)
+	}
 
 	return f
 }

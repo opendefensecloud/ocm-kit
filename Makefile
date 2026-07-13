@@ -9,6 +9,8 @@ common.mk:
 	printf '%s' '$(DEV_KIT_VERSION)' > .common.mk-version
 	touch .common.mk-checked
 
+DOCKER ?= docker
+
 .PHONY: fmt
 fmt: $(GOLANGCI_LINT) ## Format code
 	$(GO) fmt ./...
