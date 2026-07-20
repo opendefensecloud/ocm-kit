@@ -342,7 +342,7 @@ func Render(tmpl *HelmValuesTemplate, input *RenderingInput, opts ...RenderOptio
 
 	// Validate YAML if enabled
 	if cfg.validateYAML {
-		var jsonData interface{}
+		var jsonData any
 		if err := yaml.Unmarshal([]byte(result), &jsonData); err != nil {
 			return "", fmt.Errorf("rendered output is not valid YAML: %w", err)
 		}
@@ -426,7 +426,6 @@ func (r ImageReference) String() string {
 func derefOrEmpty(s *string) string {
 	if s == nil {
 		return ""
-	} else {
-		return *s
 	}
+	return *s
 }
