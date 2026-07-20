@@ -129,7 +129,7 @@ func TestRender(t *testing.T) {
 				return
 			}
 
-			if tt.wantMatch != "" && !contains(got, tt.wantMatch) {
+			if tt.wantMatch != "" && !strings.Contains(got, tt.wantMatch) {
 				t.Errorf("Render() output doesn't contain expected text.\nGot: %s\nExpected to contain: %s", got, tt.wantMatch)
 			}
 		})
@@ -174,10 +174,10 @@ func TestParseOCIRef(t *testing.T) {
 			}
 
 			// For valid references, check that basic parsing succeeded
-			if tt.wantTag != "" && !contains(ref, tt.wantTag) {
+			if tt.wantTag != "" && !strings.Contains(ref, tt.wantTag) {
 				t.Errorf("ParseOCIRef() tag not found. Got: %s, Expected to contain: %s", ref, tt.wantTag)
 			}
-			if tt.wantHost != "" && !contains(ref, tt.wantHost) {
+			if tt.wantHost != "" && !strings.Contains(ref, tt.wantHost) {
 				t.Errorf("ParseOCIRef() host not found. Got: %s, Expected to contain: %s", ref, tt.wantHost)
 			}
 		})
@@ -421,25 +421,6 @@ func TestRenderPullSecretFor(t *testing.T) {
 			}
 		})
 	}
-}
-
-// Helper function to check if a string contains a substring
-func contains(s, substr string) bool {
-	return len(s) > 0 && len(substr) > 0 && len(s) >= len(substr) &&
-		(s == substr || (len(s) > len(substr) &&
-			((s[:len(substr)] == substr) ||
-				(s[len(s)-len(substr):] == substr) ||
-				findSubstring(s, substr))))
-}
-
-// Helper function to find substring anywhere in the string
-func findSubstring(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
 }
 
 func mkImageRef(ref string) ImageReference {
