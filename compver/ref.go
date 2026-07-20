@@ -20,22 +20,20 @@ func (cvr *ComponentVersionRef) BaseURL() string {
 func SplitRef(ref string) (*ComponentVersionRef, error) {
 	// Split protocol
 	protocol := "oci" // Default protocol
-	parts := strings.Split(ref, "://")
-	rest := parts[0]
-	if len(parts) != 1 {
-		protocol = parts[0]
-		rest = parts[1]
+	rest := ref
+	if before, after, found := strings.Cut(ref, "://"); found {
+		protocol = before
+		rest = after
 	}
 
 	// Split host and the rest
-	hostAndPath := strings.SplitN(rest, "/", 2)
-	if len(hostAndPath) != 2 {
+	host, path, found := strings.Cut(rest, "/")
+	if !found {
 		return nil, invalidFormatErr(ref)
 	}
-	host := hostAndPath[0]
 
 	// Split path by double slash
-	pathParts := strings.Split(hostAndPath[1], "//")
+	pathParts := strings.Split(path, "//")
 	if len(pathParts) != 2 {
 		return nil, invalidFormatErr(ref)
 	}
