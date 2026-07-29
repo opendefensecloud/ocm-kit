@@ -1,5 +1,11 @@
 # ocm-kit
 
+> [!IMPORTANT]
+> **ocm-kit has moved.** The project has been donated to the NeoNephos project and now lives in the Open Component Model community repository:
+> **<https://github.com/open-component-model/community/tree/main/ocm-kit>**
+>
+> This repository is no longer the source of truth and is not maintained here anymore. Please update your dependency and any references to the new upstream location.
+
 [![Build status](https://github.com/opendefensecloud/ocm-kit/actions/workflows/golang.yaml/badge.svg)](https://github.com/opendefensecloud/ocm-kit/actions/workflows/golang.yaml)
 [![Coverage Status](https://coveralls.io/repos/github/opendefensecloud/ocm-kit/badge.svg?branch=main)](https://coveralls.io/github/opendefensecloud/ocm-kit?branch=main)
 [![Go Report Card](https://goreportcard.com/badge/go.opendefense.cloud/ocm-kit)](https://goreportcard.com/report/go.opendefense.cloud/ocm-kit)
