@@ -348,4 +348,4 @@ require (
 	sigs.k8s.io/structured-merge-diff/v6 v6.3.3 // indirect
 )
 
-replace github.com/ThalesIgnite/crypto11 => github.com/ThalesGroup/crypto11 v1.6.8
+replace github.com/ThalesIgnite/crypto11 => github.com/eclipse-keypont/crypto11 v1.6.8
