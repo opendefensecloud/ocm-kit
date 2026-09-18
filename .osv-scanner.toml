@@ -1,0 +1,21 @@
+# Vulnerabilities ignored by osv-scanner (see `make scan`).
+# Every entry needs a reason and should be revisited regularly.
+
+[[IgnoredVulns]]
+id = "GO-2026-5932"
+ignoreUntil = 2026-12-31T00:00:00Z
+reason = """
+golang.org/x/crypto/openpgp is deprecated as a whole package and has no fixed version.
+It is linked via ocm.software/ocm -> google/go-github/v45 (commit signing), which ocm-kit does not use.
+govulncheck only reports package init and interface dispatch paths.
+Revisit when ocm drops go-github v45.
+"""
+
+[[IgnoredVulns]]
+id = "GO-2026-6225"
+ignoreUntil = 2026-12-31T00:00:00Z
+reason = """
+github.com/chrismellard/docker-credential-acr-env is unmaintained and has no fixed version.
+It is linked via ocm.software/ocm -> sigstore/cosign CLI options; govulncheck finds no call path
+to the affected symbols ACRCredHelper.Get and isACRRegistry.
+"""
