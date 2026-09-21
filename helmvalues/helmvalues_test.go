@@ -1,3 +1,6 @@
+// Copyright BWI GmbH and ocm-kit contributors
+// SPDX-License-Identifier: Apache-2.0
+
 package helmvalues
 
 import (
