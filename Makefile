@@ -11,8 +11,13 @@ common.mk:
 
 DOCKER ?= docker
 
+LICENSE := apache
+LICENSE_COMMENT := BWI GmbH and ocm-kit contributors
+LICENSE_PATTERN := *\.go
+
 .PHONY: fmt
 fmt: $(GOLANGCI_LINT) ## Format code
+	$(MAKE) addlicense license=$(LICENSE) comment='$(LICENSE_COMMENT)' pattern='$(LICENSE_PATTERN)'
 	$(GO) fmt ./...
 	$(GOLANGCI_LINT) run --fix
 
@@ -20,7 +25,8 @@ fmt: $(GOLANGCI_LINT) ## Format code
 lint: lint-no-golangci golangci-lint ## Lint code
 
 .PHONY: lint-no-golangci
-lint-no-golangci: shellcheck ## Run linters but not golangci-lint to exit early in CI/CD pipeline
+lint-no-golangci: $(ADDLICENSE) shellcheck ## Run linters but not golangci-lint to exit early in CI/CD pipeline
+	$(MAKE) addlicense-check license=$(LICENSE) comment='$(LICENSE_COMMENT)' pattern='$(LICENSE_PATTERN)'
 
 .PHONY: test
 test: ## Run all tests (except E2E)
