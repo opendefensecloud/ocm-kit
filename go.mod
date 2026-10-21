@@ -1,6 +1,6 @@
 module go.opendefense.cloud/ocm-kit
 
-go 1.27.1
+go 1.27.2
 
 require (
 	github.com/Masterminds/sprig/v3 v3.3.0
