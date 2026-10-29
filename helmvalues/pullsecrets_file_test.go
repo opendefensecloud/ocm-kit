@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-// TestParsePullSecretsFile tests the ParsePullSecretsFile function
+// TestParsePullSecretsFile tests the ParsePullSecretsFile function.
 func TestParsePullSecretsFile(t *testing.T) {
 	t.Run("valid file with multiple entries", func(t *testing.T) {
 		dir := t.TempDir()
