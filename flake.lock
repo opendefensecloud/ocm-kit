@@ -15,11 +15,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1790588324,
-        "narHash": "sha256-ud70lwlsqAGvYE2x3maMzLb65JS8d8lgAb7CutXZESg=",
+        "lastModified": 1793280494,
+        "narHash": "sha256-z7iG0sBctf5N2TQXBZweaHaC25UWUwF+BXo2yYsjVQI=",
         "owner": "opendefensecloud",
         "repo": "dev-kit",
-        "rev": "81c31ba09a3cf8e117213f9392a387455706ad64",
+        "rev": "eb7bf09782d21899c52c410895b86aed5fedd819",
         "type": "github"
       },
       "original": {
@@ -81,18 +81,17 @@
     "git-hooks": {
       "inputs": {
         "flake-compat": "flake-compat",
-        "gitignore": "gitignore",
         "nixpkgs": [
           "dev-kit",
           "nixpkgs"
         ]
       },
       "locked": {
-        "lastModified": 1776796298,
-        "narHash": "sha256-PcRvlWayisPSjd0UcRQbhG8Oqw78AcPE6x872cPRHN8=",
+        "lastModified": 1791909798,
+        "narHash": "sha256-VAhpCOmrun/KXimYfR8NM88bciKCui7CqHHhThSzgag=",
         "owner": "cachix",
         "repo": "git-hooks.nix",
-        "rev": "3cfd774b0a530725a077e17354fbdb87ea1c4aad",
+        "rev": "1ba1dbfe28738c9a71c266be6efa5b89e75491a9",
         "type": "github"
       },
       "original": {
@@ -123,28 +122,6 @@
         "type": "github"
       }
     },
-    "gitignore": {
-      "inputs": {
-        "nixpkgs": [
-          "dev-kit",
-          "git-hooks",
-          "nixpkgs"
-        ]
-      },
-      "locked": {
-        "lastModified": 1709087332,
-        "narHash": "sha256-HG2cCnktfHsKV0s4XW83gU3F57gaTljL9KNSuG6bnQs=",
-        "owner": "hercules-ci",
-        "repo": "gitignore.nix",
-        "rev": "637db329424fd7e46cf4185293b9cc8c88c95394",
-        "type": "github"
-      },
-      "original": {
-        "owner": "hercules-ci",
-        "repo": "gitignore.nix",
-        "type": "github"
-      }
-    },
     "go-overlay": {
       "inputs": {
         "flake-utils": [
@@ -156,11 +133,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1790872110,
-        "narHash": "sha256-dXrMwUGE/9pT0J7MeW1BuYxpnnPPc52/oLxfqQF/5q8=",
+        "lastModified": 1793256732,
+        "narHash": "sha256-1FWhqgNyOgILiRQ+25gWmb4D23/HiIGKd/xKvt72HpA=",
         "owner": "purpleclay",
         "repo": "go-overlay",
-        "rev": "8e136930a2a34c501d612f7b7b0ee8806531768f",
+        "rev": "201792f8c32b951e56f53d50067609a1494b821f",
         "type": "github"
       },
       "original": {
