@@ -10,7 +10,7 @@ import (
 	"os"
 )
 
-// pullSecretsFile holds mappings from registries to pull secrets in the cluster
+// pullSecretsFile holds mappings from registries to pull secrets in the cluster.
 type pullSecretsFile struct {
 	PullSecrets []pullSecretMapping `json:"pullSecrets"`
 }

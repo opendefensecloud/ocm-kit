@@ -11,7 +11,7 @@ import (
 	"ocm.software/ocm/api/oci"
 )
 
-// TestRender tests the Render function with various template scenarios
+// TestRender tests the Render function with various template scenarios.
 func TestRender(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -139,7 +139,7 @@ func TestRender(t *testing.T) {
 	}
 }
 
-// TestParseOCIRef tests the ParseOCIRef function with various OCI reference formats
+// TestParseOCIRef tests the ParseOCIRef function with various OCI reference formats.
 func TestParseOCIRef(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -187,7 +187,7 @@ func TestParseOCIRef(t *testing.T) {
 	}
 }
 
-// TestMatchLabelValue tests the matchLabelValue function with different value types
+// TestMatchLabelValue tests the matchLabelValue function with different value types.
 func TestMatchLabelValue(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -237,7 +237,7 @@ func TestMatchLabelValue(t *testing.T) {
 	}
 }
 
-// TestPullSecretsResolve tests the Resolve method with OCI refs and raw registries
+// TestPullSecretsResolve tests the Resolve method with OCI refs and raw registries.
 func TestPullSecretsResolve(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -306,7 +306,7 @@ func TestPullSecretsResolve(t *testing.T) {
 	}
 }
 
-// TestPullSecretsGet tests the PullSecrets type directly
+// TestPullSecretsGet tests the PullSecrets type directly.
 func TestPullSecretsGet(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -350,7 +350,7 @@ func TestPullSecretsGet(t *testing.T) {
 	}
 }
 
-// TestRenderPullSecretFor tests the pullSecretFor template function via Render
+// TestRenderPullSecretFor tests the pullSecretFor template function via Render.
 func TestRenderPullSecretFor(t *testing.T) {
 	tests := []struct {
 		name     string

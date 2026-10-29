@@ -58,7 +58,8 @@ It takes a component version reference and renders the first Helm values templat
 			var template *helmvalues.HelmValuesTemplate
 
 			// Use local file if provided, otherwise fetch from component
-			if localHelmValuesTemplate != "" {
+			switch {
+			case localHelmValuesTemplate != "":
 				content, err := os.ReadFile(localHelmValuesTemplate)
 				if err != nil {
 					return fmt.Errorf("failed to read local helm values template: %w", err)
@@ -68,12 +69,12 @@ It takes a component version reference and renders the first Helm values templat
 					ResourceVersion: "0.0.0",
 					TemplateContent: string(content),
 				}
-			} else if chartResName != "" {
+			case chartResName != "":
 				template, err = helmvalues.GetHelmValuesTemplate(compVer, chartResName)
 				if err != nil {
 					return fmt.Errorf("failed to get helm values template: %w", err)
 				}
-			} else {
+			default:
 				template, err = helmvalues.GetFirstHelmValuesTemplate(compVer)
 				if err != nil {
 					return fmt.Errorf("failed to get helm values template: %w", err)
@@ -98,7 +99,8 @@ It takes a component version reference and renders the first Helm values templat
 				return fmt.Errorf("failed to render helm values template: %w", err)
 			}
 
-			fmt.Println(output)
+			fmt.Fprintln(cmd.OutOrStdout(), output)
+
 			return nil
 		},
 	}

@@ -34,6 +34,10 @@ common.mk
 .common.mk-version
 .common.mk-checked
 .common.mk-download
+.common.mk-configs
+.golangci.yml
+.editorconfig
+treefmt.toml
 default.etcd/
 .DS_Store
 

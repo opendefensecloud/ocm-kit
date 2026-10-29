@@ -24,11 +24,11 @@ import (
 )
 
 const (
-	// HelmValuesTemplateLabelName is the label used to identify Helm values templates in OCM resources
+	// HelmValuesTemplateLabelName is the label used to identify Helm values templates in OCM resources.
 	HelmValuesTemplateLabelName = "opendefense.cloud/helm/values-for"
 )
 
-// ErrNotFound is returned when a requested Helm values template is not found
+// ErrNotFound is returned when a requested Helm values template is not found.
 var ErrNotFound = errors.New("not found")
 
 // HelmValuesTemplate represents a Helm values template found in an OCM component.
@@ -56,6 +56,7 @@ func (p PullSecrets) Get(registry string) string {
 	if p == nil {
 		return ""
 	}
+
 	return p[registry]
 }
 
@@ -80,6 +81,7 @@ func (p PullSecrets) Resolve(ref string) string {
 			return secret
 		}
 	}
+
 	return p.Get(ref)
 }
 
@@ -91,15 +93,15 @@ type RenderingInput struct {
 	PullSecrets  PullSecrets
 }
 
-// RenderOption is a functional option for configuring Render behavior
+// RenderOption is a functional option for configuring Render behavior.
 type RenderOption func(*renderConfig)
 
-// renderConfig holds configuration for the Render function
+// renderConfig holds configuration for the Render function.
 type renderConfig struct {
 	validateYAML bool
 }
 
-// WithYAMLValidation enables YAML validation of the rendered output
+// WithYAMLValidation enables YAML validation of the rendered output.
 func WithYAMLValidation() RenderOption {
 	return func(rc *renderConfig) {
 		rc.validateYAML = true
@@ -380,6 +382,7 @@ func matchLabelValue(value any, target string) bool {
 	case string:
 		return v == target
 	}
+
 	return false
 }
 
@@ -400,6 +403,7 @@ func getFuncMap(pullSecrets PullSecrets) template.FuncMap {
 		if err != nil {
 			return ""
 		}
+
 		return string(data)
 	}
 
@@ -423,6 +427,7 @@ func (r ImageReference) String() string {
 	if r.Tag != "" {
 		s += ":" + r.Tag
 	}
+
 	return s
 }
 
@@ -430,5 +435,6 @@ func derefOrEmpty(s *string) string {
 	if s == nil {
 		return ""
 	}
+
 	return *s
 }
