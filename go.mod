@@ -5,7 +5,7 @@ go 1.27.4
 require (
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/spf13/cobra v1.10.2
-	ocm.software/ocm v0.53.0
+	ocm.software/ocm v0.55.0
 	sigs.k8s.io/yaml v1.6.0
 )
 
